@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../constants/colors.dart';
+import '../../api_service.dart'; // <--- Memanggil ApiService yang mengarah ke Laragon
 
 class LoginPortalScreen extends StatefulWidget {
   const LoginPortalScreen({super.key});
@@ -14,18 +15,65 @@ class _LoginPortalScreenState extends State<LoginPortalScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false; // <--- State untuk indikator loading (Slide 10)
 
-  void _handleLogin() {
+  // === INTEGRASI DINAMIS BACKEND LARAGON (Sesuai Slide 6 & 10) ===
+  void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      // Simulasi autentikasi & validasi role
-      if (_selectedRole == 0) {
-        // Masuk sebagai Admin
-        Navigator.pushReplacementNamed(context, '/admin-dashboard');
+      setState(() {
+        _isLoading = true;
+      });
+
+      String emailInput = _emailController.text.trim();
+      String passwordInput = _passwordController.text.trim();
+
+      // Menembak REST API login.php di Laragon via ApiService
+      var response = await ApiService.login(emailInput, passwordInput);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (response['status'] == 'success') {
+        String dbRole = response['role']; // Mengambil nilai role dari database ('admin' / 'student')
+
+        // Validasi kecocokan role pilihan UI dengan role asli di database MySQL
+        String selectedRoleStr = _selectedRole == 0 ? 'admin' : 'student';
+
+        if (dbRole == selectedRoleStr) {
+          // Jika cocok, lakukan Conditional Routing sesuai Hak Akses
+          if (dbRole == 'admin') {
+            Navigator.pushReplacementNamed(context, '/admin-dashboard');
+          } else {
+            Navigator.pushReplacementNamed(context, '/student-dashboard');
+          }
+        } else {
+          // Jika akun terdaftar namun user salah memilih segment peran di UI
+          _showErrorSnackBar("Akses ditolak! Akun Anda terdaftar sebagai $dbRole.");
+        }
       } else {
-        // Masuk sebagai Student
-        Navigator.pushReplacementNamed(context, '/student-dashboard');
+        // Tampilkan pesan kegagalan jika password salah / jaringan putus (Slide 10)
+        _showErrorSnackBar(response['message']);
       }
     }
+  }
+
+  // Fungsi pembantu untuk memunculkan SnackBar (Slide 10)
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -74,9 +122,10 @@ class _LoginPortalScreenState extends State<LoginPortalScreen> {
                   const SizedBox(height: 24),
 
                   // Input Email
-                  TextFormField(
+                  TextFormField( 
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    enabled: !_isLoading, 
                     decoration: InputDecoration(
                       labelText: 'Email Address',
                       prefixIcon: const Icon(Icons.email_outlined),
@@ -90,6 +139,7 @@ class _LoginPortalScreenState extends State<LoginPortalScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
+                    enabled: !_isLoading, // Kunci input jika sedang loading
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outline),
@@ -102,21 +152,30 @@ class _LoginPortalScreenState extends State<LoginPortalScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: _isLoading ? null : () {},
                       child: const Text('Forgot Password?', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Button Sign In
+                  // Button Sign In dengan Animasi Loading Indikator
                   ElevatedButton(
-                    onPressed: _handleLogin,
+                    onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBlue,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Sign In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('Sign In', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../services/google_books_api.dart';
 import '../../models/book_model.dart';
+import '../../api_service.dart'; // <--- Hubungkan dengan ApiService Laragon kita
 
 class GoogleBooksSearchScreen extends StatefulWidget {
   const GoogleBooksSearchScreen({super.key});
@@ -15,14 +16,48 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
   final _apiService = GoogleBooksApiService();
   List<BookModel> _searchResults = [];
   bool _isLoading = false;
+  bool _isSaving = false; // <--- Indikator loading saat proses simpan ke MySQL
 
   void _executeSearch() async {
+    if (_searchController.text.trim().isEmpty) return;
+    
     setState(() => _isLoading = true);
     final results = await _apiService.searchBooks(_searchController.text);
     setState(() {
       _searchResults = results;
       _isLoading = false;
     });
+  }
+
+  // === FUNGSI ADAPTER: MENYIMPAN MODEL BUKU KE DATABASE LARAGON ===
+  void _handleSaveBook(BookModel book) async {
+    setState(() => _isSaving = true);
+
+    // Kirim properti dari BookModel ke books.php di Laragon via HTTP POST
+    // Jika di model kamu nama variabel ISBN berbeda, sesuaikan (misal: book.isbn)
+    // Di sini kita asumsikan default parameter string jika field kosong
+    String bookIsbn = 'No ISBN'; 
+
+    var response = await ApiService.saveBookToLaragon(
+      book.title,
+      book.author,
+      bookIsbn, // Mengirim data ke tabel books MySQL
+    );
+
+    setState(() => _isSaving = false);
+
+    if (response['status'] == 'success') {
+      // Jika database berhasil mencatat, tampilkan Dialog Sukses bawaan UI kamu
+      _showSuccessDialog();
+    } else {
+      // Jika gagal (Laragon mati / IP berubah), infokan lewat SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response['message'] ?? 'Gagal menyimpan ke database lokal'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -59,7 +94,7 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: _executeSearch,
+                  onPressed: _isLoading ? null : _executeSearch,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryBlue,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -124,13 +159,16 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _showSuccessDialog,
+                    // SEKARANG MANGGIL FUNGSI INTEGRASI LARAGON, BUKAN LANGSUNG DIALOG
+                    onPressed: _isSaving ? null : () => _handleSaveBook(book),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBlue,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
-                    child: const Text('Add To Library', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    child: _isSaving
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Add To Library', style: TextStyle(color: Colors.white, fontSize: 12)),
                   ),
                 ),
               ],
