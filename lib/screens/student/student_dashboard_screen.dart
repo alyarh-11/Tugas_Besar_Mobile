@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'catalog_screen.dart';
 import 'student_profile_screen.dart';
 import 'borrowing_history_screen.dart'; 
-import 'about_app_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
-  const StudentDashboardScreen({Key? key}) : super(key: key);
+  const StudentDashboardScreen({super.key});
 
   @override
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
@@ -44,7 +43,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> _pages = [
+    final List<Widget> pages = [
       _showBorrowedBooksSubPage ? _buildBorrowedBooksPage() : _buildMainHomeTab(),
       const CatalogScreen(),
       const StudentProfileScreen(),
@@ -54,7 +53,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       backgroundColor: const Color(0xFFF8F9FA),
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: pages,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -127,10 +126,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       ),
                     ),
                     const SizedBox(width: 14),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text('Welcome back,', style: TextStyle(color: Color(0xFF93C5FD), fontSize: 13)),
                           SizedBox(height: 2),
                           Text('Karina Ismaya', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
@@ -164,9 +163,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF6366F1)]),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
+                  child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text('Digital Library', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                       SizedBox(height: 4),
                       Text('Explore thousands of books at your fingertips', style: TextStyle(color: Color(0xFFE0E7FF), fontSize: 12)),
@@ -382,12 +381,12 @@ class ReturnConfirmationScreen extends StatelessWidget {
   final Color bookIconColor;
 
   const ReturnConfirmationScreen({
-    Key? key,
+    super.key,
     required this.bookTitle,
     required this.bookAuthor,
     required this.borrowedDate,
     required this.bookIconColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

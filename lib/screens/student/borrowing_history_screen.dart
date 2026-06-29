@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class BorrowingHistoryScreen extends StatelessWidget {
-  const BorrowingHistoryScreen({Key? key}) : super(key: key);
+  const BorrowingHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

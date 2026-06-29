@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../services/google_books_api.dart';
 import '../../models/book_model.dart';
-import '../../api_service.dart'; // <--- Hubungkan dengan ApiService Laragon kita
+import '../../api_service.dart'; // Digunakan untuk menyimpan ke MySQL Laragon kelak
 
 class GoogleBooksSearchScreen extends StatefulWidget {
   const GoogleBooksSearchScreen({super.key});
@@ -16,48 +16,44 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
   final _apiService = GoogleBooksApiService();
   List<BookModel> _searchResults = [];
   bool _isLoading = false;
-  bool _isSaving = false; // <--- Indikator loading saat proses simpan ke MySQL
 
   void _executeSearch() async {
-    if (_searchController.text.trim().isEmpty) return;
-    
-    setState(() => _isLoading = true);
-    final results = await _apiService.searchBooks(_searchController.text);
+  final query = _searchController.text.trim();
+
+  if (query.isEmpty) return;
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final results = await _apiService.searchBooks(query);
+
+    debugPrint("Jumlah hasil: ${results.length}");
+
     setState(() {
       _searchResults = results;
+    });
+  } catch (e) {
+    debugPrint("SEARCH ERROR: $e");
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.toString()),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() {
       _isLoading = false;
     });
   }
+}
 
-  // === FUNGSI ADAPTER: MENYIMPAN MODEL BUKU KE DATABASE LARAGON ===
-  void _handleSaveBook(BookModel book) async {
-    setState(() => _isSaving = true);
-
-    // Kirim properti dari BookModel ke books.php di Laragon via HTTP POST
-    // Jika di model kamu nama variabel ISBN berbeda, sesuaikan (misal: book.isbn)
-    // Di sini kita asumsikan default parameter string jika field kosong
-    String bookIsbn = 'No ISBN'; 
-
-    var response = await ApiService.saveBookToLaragon(
-      book.title,
-      book.author,
-      bookIsbn, // Mengirim data ke tabel books MySQL
-    );
-
-    setState(() => _isSaving = false);
-
-    if (response['status'] == 'success') {
-      // Jika database berhasil mencatat, tampilkan Dialog Sukses bawaan UI kamu
-      _showSuccessDialog();
-    } else {
-      // Jika gagal (Laragon mati / IP berubah), infokan lewat SnackBar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response['message'] ?? 'Gagal menyimpan ke database lokal'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -77,6 +73,7 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Row Kolom Input Pencarian
             Row(
               children: [
                 Expanded(
@@ -105,6 +102,8 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
               ],
             ),
             const SizedBox(height: 24),
+            
+            // Area Render Hasil Grid View Dinamis
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue)))
@@ -135,7 +134,7 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -143,9 +142,13 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
           Expanded(
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              child: Image.network(book.coverUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) {
-                return const Center(child: Icon(Icons.broken_image, color: Colors.grey));
-              }),
+              child: Image.network(
+                book.coverUrl, 
+                fit: BoxFit.cover, 
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(child: Icon(Icons.broken_image, color: Colors.grey));
+                },
+              ),
             ),
           ),
           Padding(
@@ -159,16 +162,30 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    // SEKARANG MANGGIL FUNGSI INTEGRASI LARAGON, BUKAN LANGSUNG DIALOG
-                    onPressed: _isSaving ? null : () => _handleSaveBook(book),
+                    onPressed: () async {
+                      var response = await ApiService.saveBookToLaragon(book);
+
+                      if (!mounted) return;
+
+                      if (response["status"] == "success") {
+                        _showSuccessDialog();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              response["message"] ?? "Database Error",
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryBlue,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
-                    child: _isSaving
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('Add To Library', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    child: const Text('Add To Library', style: TextStyle(color: Colors.white, fontSize: 12)),
                   ),
                 ),
               ],

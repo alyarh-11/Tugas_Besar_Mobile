@@ -4,7 +4,7 @@ import '../constants/colors.dart'; // Pastikan Anda sudah membuat AppColors
 class BookGridWidget extends StatelessWidget {
   final List<dynamic> books; // List data buku dari Firestore/API
 
-  const BookGridWidget({Key? key, required this.books}) : super(key: key);
+  const BookGridWidget({super.key, required this.books});
 
   // 1. Fungsi penentu kolom ditaruh di dalam kelas agar bisa diakses
   int _getResponsiveColumnCount(BuildContext context) {
@@ -41,7 +41,7 @@ class BookGridWidget extends StatelessWidget {
 class BookCard extends StatelessWidget {
   final dynamic book;
 
-  const BookCard({Key? key, required this.book}) : super(key: key);
+  const BookCard({super.key, required this.book});
 
   @override
   Widget build(BuildContext context) {

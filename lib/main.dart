@@ -30,7 +30,7 @@ class PocketLibraryApp extends StatelessWidget {
       // 2. Di sini daftar rute sisanya (Rute '/' SUDAH DIHAPUS agar tidak bentrok)
       routes: {
         '/login': (context) => const LoginPortalScreen(),
-        '/admin-dashboard': (context) => const AdminDashboardScreen(),
+        '/admin-dashboard': (context) => const DashboardScreen(),
         '/student-dashboard': (context) => const StudentDashboardScreen(),
         '/admin/google-search': (context) => const GoogleBooksSearchScreen(),
       },

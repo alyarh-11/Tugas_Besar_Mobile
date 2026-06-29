@@ -1,26 +1,34 @@
 import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../api_service.dart';
+import '../../models/book_model.dart';
 
 class AdminAddBookScreen extends StatefulWidget {
   const AdminAddBookScreen({super.key});
 
   @override
-  State<AdminAddBookScreen> createState() => _AdminAddBookScreenState();
+  State<AdminAddBookScreen> createState() =>
+      _AdminAddBookScreenState();
 }
 
-class _AdminAddBookScreenState extends State<AdminAddBookScreen> {
+class _AdminAddBookScreenState
+    extends State<AdminAddBookScreen> {
+
   final _searchController = TextEditingController();
+
   List<dynamic> _googleBooksResult = [];
+
   bool _isLoadingSearch = false;
   bool _isLoadingSave = false;
 
-  // === 1. FUNGSI FETCH DATA GOOGLE BOOKS API (Sesuai Slide 8) ===
   void _searchBook() async {
     String query = _searchController.text.trim();
+
     if (query.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ketik judul buku terlebih dahulu!')),
+        const SnackBar(
+          content: Text("Ketik judul buku terlebih dahulu!"),
+        ),
       );
       return;
     }
@@ -30,8 +38,10 @@ class _AdminAddBookScreenState extends State<AdminAddBookScreen> {
       _googleBooksResult = [];
     });
 
-    // Menembak Google Books API publik
-    var results = await ApiService.searchGoogleBooks(query);
+    final results =
+        await ApiService.searchGoogleBooks(query);
+
+    if (!mounted) return;
 
     setState(() {
       _googleBooksResult = results;
@@ -39,48 +49,122 @@ class _AdminAddBookScreenState extends State<AdminAddBookScreen> {
     });
   }
 
-  // === 2. FUNGSI SIKLUS CRUD: CREATE KE LARAGON (Sesuai Slide 9) ===
-  void _saveBook(Map<String, dynamic>? volumeInfo) async {
-    if (volumeInfo == null) return;
+    void _saveBook(Map<String, dynamic>? volumeInfo) async {
+      if (volumeInfo == null) return;
 
-    setState(() {
-      _isLoadingSave = true;
-    });
+      setState(() {
+        _isLoadingSave = true;
+      });
 
-    // Validasi Null-Safety agar tidak Crash jika data Google kosong (Slide 8 & 10)
-    String title = volumeInfo['title'] ?? 'Judul Tidak Diketahui';
-    
-    String author = 'Penulis Tidak Diketahui';
-    if (volumeInfo['authors'] != null && (volumeInfo['authors'] as List).isNotEmpty) {
-      author = volumeInfo['authors'][0].toString();
-    }
+      // ===========================
+      // Author
+      // ===========================
+      String author = "Unknown Author";
 
-    String isbn = 'Tanpa ISBN';
-    if (volumeInfo['industryIdentifiers'] != null) {
-      var identifiers = volumeInfo['industryIdentifiers'] as List;
-      if (identifiers.isNotEmpty) {
-        isbn = identifiers[0]['identifier'] ?? 'Tanpa ISBN';
+      if (volumeInfo["authors"] != null &&
+          (volumeInfo["authors"] as List).isNotEmpty) {
+        author = volumeInfo["authors"][0].toString();
       }
-    }
 
-    // Mengirim HTTP POST ke books.php di Laragon (Slide 9)
-    var response = await ApiService.saveBookToLaragon(title, author, isbn);
+      // ===========================
+      // Category
+      // ===========================
+      String category = "General";
 
-    setState(() {
-      _isLoadingSave = false;
-    });
+      if (volumeInfo["categories"] != null &&
+          (volumeInfo["categories"] as List).isNotEmpty) {
+        category = volumeInfo["categories"][0].toString();
+      }
 
-    // Menampilkan notifikasi SnackBar Berhasil/Gagal (Slide 10)
-    if (response['status'] == 'success') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message']), backgroundColor: Colors.green),
+      // ===========================
+      // ISBN
+      // ===========================
+      String isbn = "";
+
+      if (volumeInfo["industryIdentifiers"] != null) {
+        List ids = volumeInfo["industryIdentifiers"];
+
+        if (ids.isNotEmpty) {
+          isbn = ids[0]["identifier"] ?? "";
+        }
+      }
+
+      // ===========================
+      // Cover
+      // ===========================
+      String cover =
+          "https://via.placeholder.com/150x220.png?text=No+Cover";
+
+      if (volumeInfo["imageLinks"] != null) {
+        cover =
+            volumeInfo["imageLinks"]["thumbnail"] ??
+            volumeInfo["imageLinks"]["smallThumbnail"] ??
+            cover;
+
+        if (cover.startsWith("http://")) {
+          cover = cover.replaceFirst("http://", "https://");
+        }
+      }
+
+      // ===========================
+      // Publisher
+      // ===========================
+      String publisher =
+          volumeInfo["publisher"] ?? "";
+
+      // ===========================
+      // Year
+      // ===========================
+      String year = "";
+
+      if (volumeInfo["publishedDate"] != null) {
+        year = volumeInfo["publishedDate"]
+            .toString()
+            .split("-")[0];
+      }
+
+      // ===========================
+      // Summary
+      // ===========================
+      String summary =
+          volumeInfo["description"] ??
+          "No description available.";
+
+      // ===========================
+      // Buat Object BookModel
+      // ===========================
+      BookModel book = BookModel(
+        id: "",
+        title: volumeInfo["title"] ?? "",
+        author: author,
+        category: category,
+        coverUrl: cover,
+        publisher: publisher,
+        year: year,
+        isbn: isbn,
+        summary: summary,
+        status: "Available",
       );
-    } else {
+
+      final response =
+          await ApiService.saveBookToLaragon(book);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingSave = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message']), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(response["message"]),
+          backgroundColor:
+              response["status"] == "success"
+                  ? Colors.green
+                  : Colors.red,
+        ),
       );
     }
-  }
 
   @override
   void dispose() {
@@ -167,12 +251,32 @@ class _AdminAddBookScreenState extends State<AdminAddBookScreen> {
                                 title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
                                 subtitle: Text('Penulis: $displayAuthor'),
                                 trailing: ElevatedButton(
-                                  onPressed: _isLoadingSave ? null : () => _saveBook(volumeInfo),
+                                  onPressed: _isLoadingSave
+                                      ? null
+                                      : () {
+                                          _saveBook(volumeInfo);
+                                        },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                   ),
-                                  child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+                                  child: _isLoadingSave
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Text(
+                                          "Simpan",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                 ),
                               ),
                             );

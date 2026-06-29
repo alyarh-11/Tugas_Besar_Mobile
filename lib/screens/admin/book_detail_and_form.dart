@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../api_service.dart';
 
 // =========================================================================
 // 1. DETAIL SCREEN & MODAL DELETE BOOK (ANTI-GAGAL)
 // =========================================================================
-class AdminBookDetailScreen extends StatelessWidget {
+class AdminBookDetailScreen extends StatefulWidget {
   final Map<String, dynamic> bookData;
   const AdminBookDetailScreen({super.key, required this.bookData});
+
+  @override
+  State<AdminBookDetailScreen> createState() => _AdminBookDetailScreenState();
+}
+
+class _AdminBookDetailScreenState extends State<AdminBookDetailScreen> {
 
   // Modal Bottom Sheet Khusus Konfirmasi Hapus Buku
   void _showDeleteConfirmation(BuildContext context, String title) {
@@ -102,9 +109,36 @@ class AdminBookDetailScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(ctx); // Tutup bottom sheet
-                        Navigator.pop(context); // Balik ke halaman dashboard utama
+                      onPressed: () async {
+                        Navigator.pop(ctx); // Tutup bottom sheet dulu
+                        final id = widget.bookData['id']?.toString() ?? '';
+                        if (id.isEmpty) return;
+
+                        final success = await ApiService.deleteBook(id);
+                        if (!context.mounted) return;
+
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Row(children: [
+                                Icon(Icons.check_circle, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text('Buku berhasil dihapus dari database!'),
+                              ]),
+                              backgroundColor: const Color(0xFF10B981),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          );
+                          Navigator.pop(context, 'deleted'); // Kirim sinyal ke halaman sebelumnya
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Gagal menghapus buku. Coba lagi.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFEF4444),
@@ -131,6 +165,11 @@ class AdminBookDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final coverUrl = widget.bookData['cover_url']?.toString() ?? '';
+    final summaryText = widget.bookData['summary']?.toString() ?? '';
+    final coverColor = widget.bookData['color'];
+    final Color fallbackColor = (coverColor is Color) ? coverColor : const Color(0xFF3B82F6);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FA),
       appBar: AppBar(
@@ -147,29 +186,63 @@ class AdminBookDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: [
-                  Container(
-                    width: 140,
-                    height: 190,
-                    decoration: BoxDecoration(color: bookData['color'] ?? Colors.blue, borderRadius: BorderRadius.circular(16)),
-                    child: const Center(child: Icon(Icons.menu_book_rounded, color: Colors.white, size: 65)),
+                  // --- COVER BUKU ---
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: coverUrl.isNotEmpty && !coverUrl.contains('placeholder')
+                        ? Image.network(
+                            coverUrl,
+                            width: 140,
+                            height: 190,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildCoverPlaceholder(fallbackColor),
+                          )
+                        : _buildCoverPlaceholder(fallbackColor),
                   ),
                   const SizedBox(height: 24),
+
+                  // --- INFO CARD ---
                   Container(
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        Text(bookData['title'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text('by ${bookData['author'] ?? ''}', style: const TextStyle(color: Colors.grey)),
+                        Text(widget.bookData['title'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text('by ${widget.bookData['author'] ?? ''}', style: const TextStyle(color: Colors.grey)),
                         const Divider(height: 32),
-                        _row('Category', bookData['category'] ?? '-'),
-                        _row('Publisher', bookData['publisher'] ?? '-'),
-                        _row('Year', bookData['year'] ?? '-'),
-                        _row('ISBN', bookData['isbn'] ?? '-'),
-                        _row('Status', bookData['status'] ?? 'Available', isStatus: true),
+                        _row('Category', widget.bookData['category'] ?? '-'),
+                        _row('Publisher', widget.bookData['publisher'] ?? '-'),
+                        _row('Year', widget.bookData['year'] ?? '-'),
+                        _row('ISBN', widget.bookData['isbn'] ?? '-'),
+                        _row('Status', widget.bookData['status'] ?? 'Available', isStatus: true),
                       ],
                     ),
                   ),
+
+                  // --- SUMMARY ---
+                  if (summaryText.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(children: [
+                            Icon(Icons.subject_rounded, color: Color(0xFF3B82F6), size: 20),
+                            SizedBox(width: 8),
+                            Text('Ringkasan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          ]),
+                          const SizedBox(height: 12),
+                          Text(
+                            summaryText,
+                            style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.6),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -182,7 +255,7 @@ class AdminBookDetailScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => AdminBookFormScreen(bookData: bookData)));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => AdminBookFormScreen(bookData: widget.bookData)));
                     },
                     icon: const Icon(Icons.edit_document, color: Colors.white),
                     label: const Text('Edit Book', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -192,9 +265,9 @@ class AdminBookDetailScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Builder(
-                    builder: (buttonContext) { // Digunakan agar Context tidak bentrok saat menumpuk dialog
+                    builder: (buttonContext) {
                       return ElevatedButton.icon(
-                        onPressed: () => _showDeleteConfirmation(buttonContext, bookData['title'] ?? 'Selected Book'),
+                        onPressed: () => _showDeleteConfirmation(buttonContext, widget.bookData['title'] ?? 'Selected Book'),
                         icon: const Icon(Icons.delete_outline, color: Colors.white),
                         label: const Text('Delete Book', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
@@ -210,6 +283,15 @@ class AdminBookDetailScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildCoverPlaceholder(Color color) {
+    return Container(
+      width: 140,
+      height: 190,
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
+      child: const Center(child: Icon(Icons.menu_book_rounded, color: Colors.white, size: 65)),
+    );
+  }
+
   Widget _row(String label, String value, {bool isStatus = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14.0),
@@ -217,13 +299,17 @@ class AdminBookDetailScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
-          isStatus 
+          isStatus
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: value == 'Available' ? const Color(0xFFE6F9F0) : const Color(0xFFFFF2EC), borderRadius: BorderRadius.circular(12)),
                 child: Text(value, style: TextStyle(color: value == 'Available' ? const Color(0xFF00C569) : const Color(0xFFFF6B2C), fontWeight: FontWeight.bold, fontSize: 13)),
               )
-            : Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+            : Expanded(
+                child: Text(value,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+              ),
         ],
       ),
     );

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../constants/colors.dart';
 
 class BorrowSuccessScreen extends StatelessWidget {
-  const BorrowSuccessScreen({Key? key}) : super(key: key);
+  const BorrowSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -141,9 +140,9 @@ class BorrowSuccessScreen extends StatelessWidget {
                                   color: const Color(0xFFE8F5E9), // Latar tag hijau muda
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  children: const [
+                                  children: [
                                     Icon(
                                       Icons.menu_book_rounded,
                                       color: Color(0xFF2EC4B6),
@@ -173,33 +172,33 @@ class BorrowSuccessScreen extends StatelessWidget {
                     const SizedBox(height: 12),
 
                     // Baris Informasi Tanggal Pinjam
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
-                          children: const [
+                          children: [
                             Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey),
                             SizedBox(width: 8),
                             Text('Borrowed On', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
                           ],
                         ),
-                        const Text('June 8, 2026', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87)),
+                        Text('June 8, 2026', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87)),
                       ],
                     ),
                     const SizedBox(height: 12),
 
                     // Baris Informasi Tanggal Jatuh Tempo
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
-                          children: const [
+                          children: [
                             Icon(Icons.access_time_rounded, size: 16, color: Colors.orange),
                             SizedBox(width: 8),
                             Text('Due Date', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
                           ],
                         ),
-                        const Text('June 22, 2026', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87)),
+                        Text('June 22, 2026', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87)),
                       ],
                     ),
                     const SizedBox(height: 18),

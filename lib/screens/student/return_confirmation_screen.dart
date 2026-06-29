@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ReturnConfirmationScreen extends StatelessWidget {
-  const ReturnConfirmationScreen({Key? key}) : super(key: key);
+  const ReturnConfirmationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

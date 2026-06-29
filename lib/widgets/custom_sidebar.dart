@@ -19,10 +19,10 @@ class CustomSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
+          const Padding(
+            padding: EdgeInsets.all(24.0),
             child: Row(
-              children: const [
+              children: [
                 Icon(Icons.menu_book, color: AppColors.primaryBlue, size: 30),
                 SizedBox(width: 12),
                 Text(

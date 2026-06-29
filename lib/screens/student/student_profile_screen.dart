@@ -4,7 +4,7 @@ import 'settings_screen.dart';
 import 'about_app_screen.dart';   
 
 class StudentProfileScreen extends StatelessWidget {
-  const StudentProfileScreen({Key? key}) : super(key: key);
+  const StudentProfileScreen({super.key});
 
   // Fungsi untuk memunculkan Pop-up Konfirmasi Logout sesuai Desain
   void _showLogoutDialog(BuildContext context) {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'models/book_model.dart';
 
 class ApiService {
   // === 1. KONFIGURASI URL LAUNCHER (Sesuai Slide 5) ===
@@ -52,25 +53,37 @@ class ApiService {
   }
 
   // === 4. FUNGSI SIKLUS CRUD: CREATE (Simpan ke MySQL Laragon - Sesuai Slide 9) ===
-  static Future<Map<String, dynamic>> saveBookToLaragon(String title, String author, String isbn) async {
-    try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/books.php"),
-        body: {
-          "title": title,
-          "author": author,
-          "isbn": isbn,
-        },
-      );
+ static Future<Map<String, dynamic>> saveBookToLaragon(BookModel book) async {
+  try {
+    final response = await http.post(
+      Uri.parse("$baseUrl/books.php"),
+      body: {
+        "title": book.title,
+        "author": book.author,
+        "category": book.category,
+        "cover_url": book.coverUrl,
+        "publisher": book.publisher,
+        "publish_year": book.year,
+        "isbn": book.isbn,
+        "summary": book.summary,
+        "status": book.status,
+      },
+    );
 
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      }
-      return {"status": "error", "message": "Gagal menyimpan buku ke database lokal."};
-    } catch (e) {
-      return {"status": "error", "message": "Koneksi terputus saat menyimpan ke Laragon."};
-    }
+    print("STATUS CODE: ${response.statusCode}");
+    print("RESPONSE BODY:");
+    print(response.body);
+
+    return json.decode(response.body);
+  } catch (e) {
+    print("ERROR: $e");
+
+    return {
+      "status": "error",
+      "message": e.toString(),
+    };
   }
+}
 
   // === 5. FUNGSI SIKLUS CRUD: READ (Ambil dari MySQL Laragon - Sesuai Slide 9) ===
   static Future<List<dynamic>> getLocalBooks() async {
@@ -87,15 +100,101 @@ class ApiService {
   }
 
   // === 6. FUNGSI SIKLUS CRUD: DELETE (Hapus dari MySQL Laragon - Sesuai Slide 9) ===
+  static Future<List<BookModel>> getBooks() async {
+  try {
+    final response = await http.get(
+      Uri.parse("$baseUrl/books.php"),
+    );
+
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+
+      return data
+          .map((e) => BookModel(
+                id: e["id"].toString(),
+                title: e["title"] ?? "",
+                author: e["author"] ?? "",
+                category: e["category"] ?? "General",
+                coverUrl: e["cover_url"] ??
+                    "https://via.placeholder.com/150x220.png?text=No+Cover",
+                publisher: e["publisher"] ?? "",
+                year: e["publish_year"] ?? "",
+                isbn: e["isbn"] ?? "",
+                summary: e["summary"] ?? "",
+                status: e["status"] ?? "Available",
+              ))
+          .toList();
+    }
+
+        return [];
+      } catch (e) {
+        print(e);
+        return [];
+      }
+}
   static Future<bool> deleteBook(String id) async {
     try {
       final response = await http.delete(
         Uri.parse("$baseUrl/books.php"),
+        body: {
+          "id": id,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final res = json.decode(response.body);
+        return res["status"] == "success";
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // === 7. FUNGSI AMBIL DATA PENGGUNA AKTIF ===
+  static Future<Map<String, dynamic>> getUsers() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/users.php"));
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {"status": "error", "total": 0, "users": []};
+    } catch (e) {
+      return {"status": "error", "total": 0, "users": []};
+    }
+  }
+
+  // === 8. FUNGSI REGISTRASI ANGGOTA BARU ===
+  static Future<Map<String, dynamic>> registerUser(String email, String password, String role) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/users.php"),
+        body: {
+          "email": email,
+          "password": password,
+          "role": role,
+        },
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {"status": "error", "message": "Server error (${response.statusCode})"};
+    } catch (e) {
+      return {"status": "error", "message": "Gagal terhubung ke server!"};
+    }
+  }
+
+  // === 9. FUNGSI HAPUS PENGGUNA ===
+  static Future<bool> deleteUser(String id) async {
+    try {
+      final response = await http.delete(
+        Uri.parse("$baseUrl/users.php"),
         body: {"id": id},
       );
       if (response.statusCode == 200) {
         final res = json.decode(response.body);
-        return res['status'] == 'success';
+        return res["status"] == "success";
       }
       return false;
     } catch (e) {

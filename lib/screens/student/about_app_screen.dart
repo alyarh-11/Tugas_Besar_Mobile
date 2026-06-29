@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AboutAppScreen extends StatelessWidget {
-  const AboutAppScreen({Key? key}) : super(key: key);
+  const AboutAppScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -66,9 +66,9 @@ class AboutAppScreen extends StatelessWidget {
               icon: Icons.code_rounded,
               iconColor: const Color(0xFF2EC4B6),
               title: 'Technology',
-              content: Column(
+              content: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text('Flutter', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),
                   Text('Firebase Firestore', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),
                   Text('Google Books API', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),

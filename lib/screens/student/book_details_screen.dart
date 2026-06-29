@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../constants/colors.dart';
 import 'borrow_success_screen.dart'; // Import halaman sukses agar bisa berpindah halaman
+import '../../models/book_model.dart';
+import '../../api_service.dart';
 
 class BookDetailsScreen extends StatelessWidget {
-  const BookDetailsScreen({Key? key}) : super(key: key);
+
+  final BookModel book;
+
+  const BookDetailsScreen({
+    super.key,
+    required this.book,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,33 +48,31 @@ class BookDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // --- SAMPUL BUKU ---
-                    Container(
-                      width: 160,
-                      height: 220,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5B86FF), // Warna biru pudar sesuai referensi gambar
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.menu_book_rounded,
-                          color: Colors.white,
-                          size: 56,
-                        ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        book.coverUrl,
+                        width: 160,
+                        height: 220,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 160,
+                            height: 220,
+                            color: Colors.grey.shade300,
+                            child: const Icon(
+                              Icons.menu_book,
+                              size: 60,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 24),
 
                     // --- JUDUL BUKU ---
-                    const Text(
-                      'To Kill a Mockingbird',
+                    Text(
+                      book.title,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -78,8 +83,8 @@ class BookDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 6),
 
                     // --- NAMA PENULIS ---
-                    const Text(
-                      'Harper Lee',
+                    Text(
+                      book.author,
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey,
@@ -87,6 +92,24 @@ class BookDetailsScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 6),
+                      Text(
+                        "${book.publisher} • ${book.year}",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Text(
+                        "ISBN : ${book.isbn}",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
+                        ),
+                      ),
                     const SizedBox(height: 16),
 
                     // --- CHIPS ROW (Kategori & Status) ---
@@ -100,8 +123,9 @@ class BookDetailsScreen extends StatelessWidget {
                             color: const Color(0xFFE8EFFF), // Biru sangat muda pudar
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            'Finance & Business',
+                          child: 
+                          Text(
+                            book.category,
                             style: TextStyle(
                               fontSize: 13,
                               color: Color(0xFF5B86FF), // Menggunakan warna senada sampul
@@ -113,25 +137,38 @@ class BookDetailsScreen extends StatelessWidget {
                         
                         // Chip Status Ketersediaan (Available)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9), // Hijau sangat muda pudar
+                            color: book.status == "Available"
+                                ? const Color(0xFFE8F5E9)
+                                : Colors.red.shade50,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
+
                               CircleAvatar(
                                 radius: 3,
-                                backgroundColor: Color(0xFF2EC4B6), // Titik hijau indikator aktif
+                                backgroundColor:
+                                    book.status == "Available"
+                                        ? const Color(0xFF2EC4B6)
+                                        : Colors.red,
                               ),
-                              SizedBox(width: 6),
+
+                              const SizedBox(width: 6),
+
                               Text(
-                                'Available',
+                                book.status,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF2EC4B6),
                                   fontWeight: FontWeight.w600,
+                                  color: book.status == "Available"
+                                      ? const Color(0xFF2EC4B6)
+                                      : Colors.red,
                                 ),
                               ),
                             ],
@@ -152,7 +189,7 @@ class BookDetailsScreen extends StatelessWidget {
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             'Summary',
                             style: TextStyle(
@@ -163,11 +200,11 @@ class BookDetailsScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 10),
                           Text(
-                            'Timeless lessons on wealth, greed, and happiness. Learn how behavior shapes financial success more than knowledge.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
-                              height: 1.5, // Mengatur tinggi baris teks rangkuman agar mudah dibaca
+                            book.summary,
+                            style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                            height: 1.5, // Mengatur tinggi baris teks rangkuman agar mudah dibaca
                             ),
                           ),
                         ],
@@ -206,7 +243,9 @@ class BookDetailsScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton.icon(
-                  onPressed: () {
+                 onPressed: book.status != "Available"
+                  ? null
+                  : () async {
                     // AKSI NAVIGASI: Mengganti halaman detail langsung dengan halaman Sukses Pinjam
                     Navigator.pushReplacement(
                       context,

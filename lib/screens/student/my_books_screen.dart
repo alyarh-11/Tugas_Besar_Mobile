@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 
 class MyBooksScreen extends StatelessWidget {
-  const MyBooksScreen({Key? key}) : super(key: key);
+  const MyBooksScreen({super.key});
 
   // Mock data daftar buku yang dipinjam sesuai dengan referensi gambar Anda
   final List<Map<String, dynamic>> _borrowedBooks = const [

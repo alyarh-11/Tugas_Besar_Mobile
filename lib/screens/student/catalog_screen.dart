@@ -1,51 +1,66 @@
 import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
-import 'book_details_screen.dart'; // Import halaman detail buku agar bisa pindah halaman
+import '../../models/book_model.dart';
+import '../../api_service.dart';
+import 'book_details_screen.dart';
 
-class CatalogScreen extends StatelessWidget {
-  const CatalogScreen({Key? key}) : super(key: key);
+class CatalogScreen extends StatefulWidget {
+  const CatalogScreen({super.key});
 
-  // Mock data buku yang disesuaikan persis dengan gambar referensi Anda
-  final List<Map<String, dynamic>> _books = const [
-    {
-      'title': 'The Great Gatsby',
-      'author': 'F. Scott Fitzgerald',
-      'coverColor': Color(0xFFFF9F00), // Orange
-      'isAvailable': true,
-    },
-    {
-      'title': 'To Kill a Mockingbird',
-      'author': 'Harper Lee',
-      'coverColor': Color(0xFF5B86FF), // Blue/Purple
-      'isAvailable': false,
-    },
-    {
-      'title': '1984',
-      'author': 'George Orwell',
-      'coverColor': Color(0xFFFF4B81), // Pink/Red
-      'isAvailable': true,
-    },
-    {
-      'title': 'Pride and Prejudice',
-      'author': 'Jane Austen',
-      'coverColor': Color(0xFFB066FF), // Light Purple
-      'isAvailable': true,
-    },
-  ];
+  @override
+  State<CatalogScreen> createState() => _CatalogScreenState();
+}
+
+class _CatalogScreenState extends State<CatalogScreen> {
+  List<BookModel> books = [];
+  List<BookModel> filteredBooks = [];
+
+  bool isLoading = true;
+
+  final TextEditingController searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    loadBooks();
+  }
+
+  Future<void> loadBooks() async {
+    final data = await ApiService.getBooks();
+
+    setState(() {
+      books = data;
+      filteredBooks = data;
+      isLoading = false;
+    });
+  }
+
+  void searchBook(String value) {
+    setState(() {
+      filteredBooks = books.where((book) {
+        return book.title.toLowerCase().contains(value.toLowerCase()) ||
+            book.author.toLowerCase().contains(value.toLowerCase());
+      }).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Menggunakan warna background dari konstanta proyekmu
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- HEADER TITLE ---
+
             const Padding(
-              padding: EdgeInsets.only(left: 20.0, top: 20.0, bottom: 12.0),
+              padding: EdgeInsets.only(
+                left: 20,
+                top: 20,
+                bottom: 12,
+              ),
               child: Text(
-                'Catalog',
+                "Catalog",
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -54,21 +69,21 @@ class CatalogScreen extends StatelessWidget {
               ),
             ),
 
-            // --- SEARCH BAR ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F3F5),
+                  color: const Color(0xffF1F3F5),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
                 ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search books or authors...',
-                    hintStyle: TextStyle(color: Colors.grey, fontSize: 15),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: searchBook,
+                  decoration: const InputDecoration(
+                    hintText: "Search books or authors...",
                     border: InputBorder.none,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
               ),
@@ -76,13 +91,11 @@ class CatalogScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // --- SUBTITLE ---
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0),
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                'Curated by Admin',
+                "Curated by Admin",
                 style: TextStyle(
-                  fontSize: 13,
                   color: Colors.grey,
                   fontWeight: FontWeight.w500,
                 ),
@@ -91,22 +104,25 @@ class CatalogScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // --- GRID VIEW DAFTAR BUKU ---
             Expanded(
-              child: GridView.builder(
-                // Menggunakan EdgeInsets.only untuk menghindari error parameter 'bottom'
-                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                itemCount: _books.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,         // Menampilkan 2 kolom ke samping
-                  childAspectRatio: 0.62,    // Rasio proporsional tinggi & lebar card agar tidak overflow
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                ),
-                itemBuilder: (context, index) {
-                  return _buildBookGridItem(context, _books[index]);
-                },
-              ),
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredBooks.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: .60,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                      ),
+                      itemBuilder: (context, index) {
+                        return buildBookCard(filteredBooks[index]);
+                      },
+                    ),
             ),
           ],
         ),
@@ -114,134 +130,109 @@ class CatalogScreen extends StatelessWidget {
     );
   }
 
-  // --- WIDGET HELPER UNTUK ITEM CARD BUKU ---
-  Widget _buildBookGridItem(BuildContext context, Map<String, dynamic> book) {
-    bool isAvailable = book['isAvailable'];
+  Widget buildBookCard(BookModel book) {
+    bool available = book.status == "Available";
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.grey.shade200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gambar Sampul Buku (Warna Solid + Icon Buku)
+
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: book['coverColor'],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.menu_book_rounded,
-                  color: Colors.white,
-                  size: 36,
-                ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                book.coverUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade300,
+                    child: const Center(
+                      child: Icon(Icons.menu_book, size: 50),
+                    ),
+                  );
+                },
               ),
             ),
           ),
+
           const SizedBox(height: 10),
 
-          // Judul Buku
           Text(
-            book['title'],
+            book.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
 
-          // Nama Penulis
+          const SizedBox(height: 3),
+
           Text(
-            book['author'],
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
+            book.author,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
           ),
+
           const SizedBox(height: 8),
 
-          // Label Status (Available / Unavailable)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: isAvailable 
-                  ? const Color(0xFFE8F5E9) // Hijau muda jika tersedia
-                  : const Color(0xFFF1F3F5), // Abu-abu jika habis
+              color: available
+                  ? Colors.green.shade50
+                  : Colors.red.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 3,
-                  backgroundColor: isAvailable 
-                      ? const Color(0xFF2EC4B6) // Titik Hijau
-                      : Colors.grey,            // Titik Abu-abu
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  isAvailable ? 'Available' : 'Unavailable',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isAvailable ? const Color(0xFF2EC4B6) : Colors.grey,
-                  ),
-                ),
-              ],
+            child: Text(
+              book.status,
+              style: TextStyle(
+                color: available
+                    ? Colors.green
+                    : Colors.red,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
+
           const SizedBox(height: 10),
 
-          // Tombol Aksi (Borrow / Not Available)
           SizedBox(
             width: double.infinity,
-            height: 36,
+            height: 38,
             child: ElevatedButton(
-              onPressed: isAvailable 
+              onPressed: available
                   ? () {
-                      // AKSI NAVIGASI: Pindah ke halaman BookDetailsScreen jika buku tersedia
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const BookDetailsScreen(),
+                          builder: (_) => BookDetailsScreen(
+                            book: book,
+                          ),
                         ),
                       );
-                    } 
-                  : null, // Jika dinonaktifkan (null), tombol otomatis terkunci bawaan Flutter
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00B4D8), // Warna biru teal tombol 'Borrow' asli sesuai gambar
-                disabledBackgroundColor: const Color(0xFFE9ECEF), // Warna abu pudar 'Not Available'
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+                    }
+                  : null,
               child: Text(
-                isAvailable ? 'Borrow' : 'Not Available',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isAvailable ? Colors.white : Colors.black38,
-                ),
+                available
+                    ? "Borrow"
+                    : "Not Available",
               ),
             ),
           ),
