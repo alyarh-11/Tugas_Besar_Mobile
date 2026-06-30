@@ -8,6 +8,7 @@ import 'system_information_screen.dart';
 import 'library_collection_screen.dart';
 import 'register_member_screen.dart';
 import 'view_reports_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -66,7 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-            BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Search API'),
+            BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'API Library'),
             BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
           ],
         ),
@@ -94,6 +95,7 @@ class _DashboardTab extends StatefulWidget {
 class _DashboardTabState extends State<_DashboardTab> {
   int _totalBooks = 0;
   int _overdueBooks = 0;
+  int _borrowedBooks = 0;
   int _activeUsers = 0;
   bool _isLoading = false;
   List<Map<String, String>> _recentActivities = [];
@@ -107,7 +109,6 @@ class _DashboardTabState extends State<_DashboardTab> {
   @override
   void didUpdateWidget(covariant _DashboardTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Kunci sinkronisasi: saat tab berubah menjadi aktif, otomatis muat ulang data backend
     if (widget.isActive && !oldWidget.isActive) {
       _fetchDashboardData();
     }
@@ -120,38 +121,49 @@ class _DashboardTabState extends State<_DashboardTab> {
     });
 
     try {
-      // Fetch buku dan pengguna secara paralel dengan tipe aman
       final booksFuture = ApiService.getBooks();
       final usersFuture = ApiService.getUsers();
+      final loansFuture = ApiService.getAllLoans();
 
       final books = await booksFuture;
       final usersData = await usersFuture;
+      final loans = await loansFuture;
 
       int total = books.length;
       int overdue = books.where((b) => b.status.toLowerCase() == 'overdue').length;
-      int activeUsers = (usersData['total'] ?? 0) as int;
+      int borrowed = loans.where((l) => l['status'] == 'active').length;
+      int activeUsers = int.tryParse(usersData['total']?.toString() ?? '0') ?? 0;
 
-      // Membuat daftar aktivitas baru secara dinamis berdasarkan data buku terbaru
+      // Build activities from recent loans + books
       List<Map<String, String>> activities = [];
-      final reversedBooks = books.reversed.toList();
-
-      for (var i = 0; i < reversedBooks.length && i < 3; i++) {
+      
+      for (var i = 0; i < loans.length && i < 3; i++) {
+        final loan = loans[i];
+        final status = loan['status'] ?? 'active';
+        final title = loan['title'] ?? 'Unknown Book';
+        final fullName = loan['full_name'] ?? 'Unknown User';
         activities.add({
-          'title': 'New Book Synced: "${reversedBooks[i].title}"',
-          'subtitle': 'Penulis: ${reversedBooks[i].author}',
+          'title': status == 'returned'
+              ? 'Buku dikembalikan: "$title"'
+              : 'Buku dipinjam: "$title"',
+          'subtitle': 'Oleh: $fullName • ${loan['borrow_date'] ?? ''}',
         });
       }
 
-      // Menambahkan aktivitas placeholder default jika MySQL masih kosong
+      if (activities.isEmpty) {
+        final reversedBooks = books.reversed.toList();
+        for (var i = 0; i < reversedBooks.length && i < 3; i++) {
+          activities.add({
+            'title': 'Buku tersedia: "${reversedBooks[i].title}"',
+            'subtitle': 'Penulis: ${reversedBooks[i].author}',
+          });
+        }
+      }
+
       if (activities.isEmpty) {
         activities.add({
-          'title': 'Belum ada aktivitas sinkronisasi buku',
-          'subtitle': 'Silakan cari & tambahkan buku di tab Search API',
-        });
-      } else {
-        activities.add({
-          'title': 'Database MySQL Laragon sinkron',
-          'subtitle': 'Koneksi API berjalan lancar',
+          'title': 'Belum ada aktivitas',
+          'subtitle': 'Silakan cari & tambahkan buku di tab API Library',
         });
       }
 
@@ -159,6 +171,7 @@ class _DashboardTabState extends State<_DashboardTab> {
         setState(() {
           _totalBooks = total;
           _overdueBooks = overdue;
+          _borrowedBooks = borrowed;
           _activeUsers = activeUsers;
           _recentActivities = activities;
           _isLoading = false;
@@ -210,7 +223,7 @@ class _DashboardTabState extends State<_DashboardTab> {
               
               LayoutBuilder(
                 builder: (context, constraints) {
-                  int crossAxisCount = constraints.maxWidth > 800 ? 3 : 2;
+                  int crossAxisCount = constraints.maxWidth > 800 ? 4 : 2;
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -230,6 +243,22 @@ class _DashboardTabState extends State<_DashboardTab> {
                             MaterialPageRoute(
                               builder: (context) => const AdminLibraryCollectionScreen(
                                 initialStatus: 'All',
+                              ),
+                            ),
+                          ).then((_) => _fetchDashboardData());
+                        },
+                      ),
+                      _StatCard(
+                        title: 'Borrowed',
+                        value: _isLoading ? '...' : _borrowedBooks.toString(),
+                        icon: Icons.bookmark_rounded,
+                        color: Colors.orange,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminLibraryCollectionScreen(
+                                initialStatus: 'Borrowed',
                               ),
                             ),
                           ).then((_) => _fetchDashboardData());
@@ -503,8 +532,34 @@ class _RecentActivityCard extends StatelessWidget {
 // ==========================================
 // WIDGET INTERNAL TAB 2: PROFIL ADMIN
 // ==========================================
-class _ProfileTab extends StatelessWidget {
+class _ProfileTab extends StatefulWidget {
   const _ProfileTab();
+
+  @override
+  State<_ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<_ProfileTab> {
+  String _fullName = '';
+  String _email = '';
+  String _id = '';
+  String _profileImage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _fullName = prefs.getString('user_full_name') ?? 'Admin';
+      _email = prefs.getString('user_email') ?? '';
+      _id = prefs.getString('user_id') ?? '';
+      _profileImage = prefs.getString('user_profile_image') ?? '';
+    });
+  }
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
@@ -597,8 +652,10 @@ class _ProfileTab extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () {
+                          onPressed: () async {
                             Navigator.pop(context); // Tutup dialog
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.clear();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Berhasil keluar dari akun')),
                             );
@@ -669,28 +726,36 @@ class _ProfileTab extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
+                            image: _profileImage.isNotEmpty
+                                ? DecorationImage(
+                                    image: NetworkImage("${ApiService.baseUrl}/$_profileImage"),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
                           alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.person_rounded,
-                            color: Colors.white,
-                            size: 44,
-                          ),
+                          child: _profileImage.isNotEmpty
+                              ? null
+                              : const Icon(
+                                  Icons.person_rounded,
+                                  color: Colors.white,
+                                  size: 44,
+                                ),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Alya Rahmawati',
-                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        Text(
+                          _fullName.isEmpty ? 'Admin' : _fullName,
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Admin ID: ADM-2024-001',
-                          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                        Text(
+                          'Admin ID: ADM-$_id',
+                          style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'alya.rahma@library.edu',
-                          style: TextStyle(color: Colors.white60, fontSize: 13),
+                        Text(
+                          _email,
+                          style: const TextStyle(color: Colors.white60, fontSize: 13),
                         ),
                       ],
                     ),
@@ -722,7 +787,7 @@ class _ProfileTab extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const AdminAccountDetailScreen()),
-                      );
+                      ).then((_) => _loadSession());
                     },
                   ),
                   const SizedBox(height: 12),

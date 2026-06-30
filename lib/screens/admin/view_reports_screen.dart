@@ -14,6 +14,8 @@ class _AdminViewReportsScreenState extends State<AdminViewReportsScreen> {
   bool _isLoading = false;
   List<BookModel> _allBooks = [];
   int _totalUsers = 0;
+  int _adminCount = 0;
+  int _studentCount = 0;
 
   // Derived stats
   int get _totalBooks => _allBooks.length;
@@ -47,6 +49,11 @@ class _AdminViewReportsScreenState extends State<AdminViewReportsScreen> {
         setState(() {
           _allBooks = books;
           _totalUsers = (users['total'] ?? 0) as int;
+          
+          final userList = users['users'] as List<dynamic>? ?? [];
+          _adminCount = userList.where((u) => u['role'].toString().toLowerCase() == 'admin').length;
+          _studentCount = userList.where((u) => u['role'].toString().toLowerCase() == 'student').length;
+          
           _isLoading = false;
         });
       }
@@ -120,9 +127,9 @@ class _AdminViewReportsScreenState extends State<AdminViewReportsScreen> {
                         child: Row(children: [
                           Expanded(child: _buildMiniStat('Total Akun', _totalUsers.toString(), const Color(0xFF8B5CF6))),
                           Container(width: 1, height: 40, color: const Color(0xFFF1F5F9)),
-                          Expanded(child: _buildMiniStat('Student', (_totalUsers - 1).toString(), const Color(0xFF3B82F6))),
+                          Expanded(child: _buildMiniStat('Student', _studentCount.toString(), const Color(0xFF3B82F6))),
                           Container(width: 1, height: 40, color: const Color(0xFFF1F5F9)),
-                          Expanded(child: _buildMiniStat('Admin', '1', const Color(0xFF10B981))),
+                          Expanded(child: _buildMiniStat('Admin', _adminCount.toString(), const Color(0xFF10B981))),
                         ]),
                       ),
                     ),

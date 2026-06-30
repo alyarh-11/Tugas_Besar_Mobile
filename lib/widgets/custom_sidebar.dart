@@ -36,7 +36,7 @@ class CustomSidebar extends StatelessWidget {
           
           // Menu Items dengan Fungsi Aktif
           _buildSidebarItem(context, 0, Icons.dashboard, 'Dashboard'),
-          _buildSidebarItem(context, 1, Icons.search, 'Google Books API'),
+          _buildSidebarItem(context, 1, Icons.search, 'API Library'),
           
           const Spacer(), // Mendorong menu logout ke paling bawah
           const Divider(height: 1),

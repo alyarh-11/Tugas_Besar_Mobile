@@ -105,7 +105,7 @@ class AdminSystemInformationScreen extends StatelessWidget {
                 icon: Icons.code_rounded,
                 iconColor: const Color(0xFF2563EB),
                 title: 'Technology',
-                lines: ['Flutter', 'Firebase Firestore', 'Google Books API'],
+                lines: ['Flutter', 'MySQL Laragon', 'API Library'],
               ),
 
               const SizedBox(height: 16),

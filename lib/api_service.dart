@@ -29,25 +29,25 @@ class ApiService {
     }
   }
 
-  // === 3. FUNGSI AMBIL DATA DARI GOOGLE BOOKS API (Sesuai Slide 8 - Telah Diperbaiki) ===
+  // === 3. FUNGSI AMBIL DATA DARI API LIBRARY (Sesuai Slide 8 - Telah Diperbaiki) ===
   static Future<List<dynamic>> searchGoogleBooks(String query) async {
     // Uri.encodeComponent otomatis mengubah spasi menjadi format URL yang valid (%20 atau +)
     final url = "https://www.googleapis.com/books/v1/volumes?q=${Uri.encodeComponent(query)}";
     
     try {
-      print("Menembak Google API: $url"); // Memantau proses di Debug Console VS Code
+      print("Menembak API Library: $url"); // Memantau proses di Debug Console VS Code
       final response = await http.get(Uri.parse(url));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print("Data Google ditemukan: ${data['items']?.length ?? 0} buku");
-        return data['items'] ?? []; // Mengembalikan list item buku dari Google
+        print("Data API Library ditemukan: ${data['items']?.length ?? 0} buku");
+        return data['items'] ?? []; // Mengembalikan list item buku dari API Library
       } else {
-        print("Google API Error Code: ${response.statusCode}");
+        print("API Library Error Code: ${response.statusCode}");
         return [];
       }
     } catch (e) {
-      print("Error Jaringan saat memanggil Google API: $e");
+      print("Error Jaringan saat memanggil API Library: $e");
       return [];
     }
   }
@@ -84,6 +84,31 @@ class ApiService {
     };
   }
 }
+
+  // === UPDATE BUKU (Simpan Perubahan ke MySQL Laragon) ===
+  static Future<Map<String, dynamic>> updateBook(BookModel book) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/books.php"), // Menggunakan POST karena PHP seringkali bermasalah baca body PUT lewat form data biasa
+        body: {
+          "_method": "PUT", // Flag trick agar PHP tahu ini update
+          "id": book.id,
+          "title": book.title,
+          "author": book.author,
+          "category": book.category,
+          "cover_url": book.coverUrl,
+          "publisher": book.publisher,
+          "publish_year": book.year,
+          "isbn": book.isbn,
+          "summary": book.summary,
+          "status": book.status,
+        },
+      );
+      return json.decode(response.body);
+    } catch (e) {
+      return {"status": "error", "message": "Gagal mengupdate buku: $e"};
+    }
+  }
 
   // === 5. FUNGSI SIKLUS CRUD: READ (Ambil dari MySQL Laragon - Sesuai Slide 9) ===
   static Future<List<dynamic>> getLocalBooks() async {
@@ -165,8 +190,37 @@ class ApiService {
     }
   }
 
+  // === UPDATE PROFIL PENGGUNA ===
+  static Future<Map<String, dynamic>> updateUserProfile(String id, String fullName, String phone, String email, String password, {List<int>? imageBytes, String? imageName}) async {
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse("$baseUrl/users.php"));
+      request.fields['_method'] = 'PUT';
+      request.fields['id'] = id;
+      request.fields['full_name'] = fullName;
+      request.fields['phone'] = phone;
+      request.fields['email'] = email;
+      if (password.isNotEmpty) {
+        request.fields['password'] = password;
+      }
+
+      if (imageBytes != null && imageName != null) {
+        request.files.add(http.MultipartFile.fromBytes('profile_image', imageBytes, filename: imageName));
+      }
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+      
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {"status": "error", "message": "Server error (${response.statusCode})"};
+    } catch (e) {
+      return {"status": "error", "message": "Gagal mengupdate profil: $e"};
+    }
+  }
+
   // === 8. FUNGSI REGISTRASI ANGGOTA BARU ===
-  static Future<Map<String, dynamic>> registerUser(String email, String password, String role) async {
+  static Future<Map<String, dynamic>> registerUser(String email, String password, String role, String fullName, String phone) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/users.php"),
@@ -174,6 +228,8 @@ class ApiService {
           "email": email,
           "password": password,
           "role": role,
+          "full_name": fullName,
+          "phone": phone,
         },
       );
       if (response.statusCode == 200) {
@@ -199,6 +255,76 @@ class ApiService {
       return false;
     } catch (e) {
       return false;
+    }
+  }
+
+  // === 10. FUNGSI PEMINJAMAN BUKU ===
+  static Future<Map<String, dynamic>> borrowBook(String userId, String bookId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/loans.php"),
+        body: {
+          "user_id": userId,
+          "book_id": bookId,
+        },
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {"status": "error", "message": "Server error (${response.statusCode})"};
+    } catch (e) {
+      return {"status": "error", "message": "Gagal terhubung ke server!"};
+    }
+  }
+
+  // === 11. FUNGSI PENGEMBALIAN BUKU ===
+  static Future<Map<String, dynamic>> returnBook(String loanId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/loans.php"),
+        body: {
+          "_method": "PUT",
+          "loan_id": loanId,
+        },
+      );
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return {"status": "error", "message": "Server error (${response.statusCode})"};
+    } catch (e) {
+      return {"status": "error", "message": "Gagal terhubung ke server!"};
+    }
+  }
+
+  // === 12. FUNGSI AMBIL DAFTAR PINJAMAN MAHASISWA ===
+  static Future<List<dynamic>> getStudentLoans(String userId) async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/loans.php?user_id=$userId"));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data["status"] == "success") {
+          return data["loans"];
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // === 13. FUNGSI AMBIL SEMUA DAFTAR PINJAMAN ===
+  static Future<List<dynamic>> getAllLoans() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/loans.php"));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data["status"] == "success") {
+          return data["loans"];
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
     }
   }
 }

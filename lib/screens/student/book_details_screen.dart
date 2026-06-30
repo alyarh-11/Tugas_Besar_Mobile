@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'borrow_success_screen.dart'; // Import halaman sukses agar bisa berpindah halaman
 import '../../models/book_model.dart';
 import '../../api_service.dart';
@@ -142,7 +143,7 @@ class BookDetailsScreen extends StatelessWidget {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: book.status == "Available"
+                            color: book.status.toLowerCase() == "available"
                                 ? const Color(0xFFE8F5E9)
                                 : Colors.red.shade50,
                             borderRadius: BorderRadius.circular(20),
@@ -154,7 +155,7 @@ class BookDetailsScreen extends StatelessWidget {
                               CircleAvatar(
                                 radius: 3,
                                 backgroundColor:
-                                    book.status == "Available"
+                                    book.status.toLowerCase() == "available"
                                         ? const Color(0xFF2EC4B6)
                                         : Colors.red,
                               ),
@@ -166,7 +167,7 @@ class BookDetailsScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: book.status == "Available"
+                                  color: book.status.toLowerCase() == "available"
                                       ? const Color(0xFF2EC4B6)
                                       : Colors.red,
                                 ),
@@ -243,16 +244,36 @@ class BookDetailsScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton.icon(
-                 onPressed: book.status != "Available"
+                 onPressed: book.status.toLowerCase() != "available"
                   ? null
                   : () async {
-                    // AKSI NAVIGASI: Mengganti halaman detail langsung dengan halaman Sukses Pinjam
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BorrowSuccessScreen(),
-                      ),
-                    );
+                      // 1. Get User ID
+                      final prefs = await SharedPreferences.getInstance();
+                      final userId = prefs.getString('user_id') ?? '1';
+
+                      // 2. Tampilkan loading dialog atau SnackBar indicator
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Processing borrow request...')),
+                      );
+
+                      // 3. Call API
+                      final result = await ApiService.borrowBook(userId, book.id);
+                      
+                      if (!context.mounted) return;
+                      
+                      if (result['status'] == 'success') {
+                        // AKSI NAVIGASI: Mengganti halaman detail langsung dengan halaman Sukses Pinjam
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BorrowSuccessScreen(),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result['message'] ?? 'Failed to borrow book'), backgroundColor: Colors.red),
+                        );
+                      }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00B4D8), // Warna hijau/teal tombol utama sesuai gambar

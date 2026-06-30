@@ -24,7 +24,7 @@ class BookModel {
   });
 
   // ==========================
-  // GOOGLE BOOKS API
+  // API LIBRARY
   // ==========================
   factory BookModel.fromJson(Map<String, dynamic> json) {
     final volumeInfo = json['volumeInfo'] ?? {};

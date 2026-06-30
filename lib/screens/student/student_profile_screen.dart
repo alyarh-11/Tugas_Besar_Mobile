@@ -1,10 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../api_service.dart';
+import '../admin/account_detail_screen.dart';
 import 'borrowing_history_screen.dart'; 
 import 'settings_screen.dart';   
 import 'about_app_screen.dart';   
 
-class StudentProfileScreen extends StatelessWidget {
+class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
+
+  @override
+  State<StudentProfileScreen> createState() => _StudentProfileScreenState();
+}
+
+class _StudentProfileScreenState extends State<StudentProfileScreen> {
+  String _fullName = '';
+  String _email = '';
+  String _id = '';
+  String _profileImage = '';
+  int _activeLoansCount = 0;
+  int _totalBorrowedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _fullName = prefs.getString('user_full_name') ?? 'Student';
+      _email = prefs.getString('user_email') ?? '';
+      _id = prefs.getString('user_id') ?? '';
+      _profileImage = prefs.getString('user_profile_image') ?? '';
+    });
+    _fetchLoanStats();
+  }
+
+  Future<void> _fetchLoanStats() async {
+    if (_id.isEmpty) return;
+    try {
+      final loans = await ApiService.getStudentLoans(_id);
+      if (!mounted) return;
+      setState(() {
+        _activeLoansCount = loans.where((l) => l['status'] == 'active').length;
+        _totalBorrowedCount = loans.length;
+      });
+    } catch (_) {}
+  }
 
   // Fungsi untuk memunculkan Pop-up Konfirmasi Logout sesuai Desain
   void _showLogoutDialog(BuildContext context) {
@@ -106,20 +150,23 @@ class StudentProfileScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () {
+                          onPressed: () async {
                             // 1. Tutup dialog pop-up konfirmasi terlebih dahulu
                             Navigator.pop(context); 
                             
-                            // 2. Tampilkan notifikasi berhasil logout
+                            // 2. Clear session
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.clear();
+
+                            // 3. Tampilkan notifikasi berhasil logout
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Logged out successfully')),
                             );
 
-                            // 3. KUNCI SOLUSI: Menggunakan pushNamedAndRemoveUntil ke rute '/login' 
-                            // agar kembali ke tampilan login utama seperti di gambar image_0c655a.png
+                            // 4. Kembali ke login
                             Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-                              '/login', // Rute halaman login utama Anda
-                              (Route<dynamic> route) => false, // Hapus total tumpukan halaman lama
+                              '/login',
+                              (Route<dynamic> route) => false,
                             );
                           },
                           child: const Text(
@@ -191,27 +238,35 @@ class StudentProfileScreen extends StatelessWidget {
                             color: Colors.white.withOpacity(0.2),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+                            image: _profileImage.isNotEmpty
+                                ? DecorationImage(
+                                    image: NetworkImage("${ApiService.baseUrl}/$_profileImage"),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
-                            'U',
-                            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                          ),
+                          child: _profileImage.isNotEmpty
+                              ? null
+                              : Text(
+                                  _fullName.isNotEmpty ? _fullName[0].toUpperCase() : 'U',
+                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                ),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Karina Ismaya',
-                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                        Text(
+                          _fullName.isEmpty ? 'Student' : _fullName,
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'STU-2024-1247',
-                          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                        Text(
+                          'STU-$_id',
+                          style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          '2306056@itg.ac.id',
-                          style: TextStyle(color: Colors.white60, fontSize: 13),
+                        Text(
+                          _email,
+                          style: const TextStyle(color: Colors.white60, fontSize: 13),
                         ),
                       ],
                     ),
@@ -232,7 +287,7 @@ class StudentProfileScreen extends StatelessWidget {
                         icon: Icons.menu_book_rounded,
                         iconColor: const Color(0xFF10B981),
                         iconBg: const Color(0xFFE6F4EA),
-                        value: '3',
+                        value: _activeLoansCount.toString(),
                         label: 'Active Loans',
                       ),
                     ),
@@ -242,7 +297,7 @@ class StudentProfileScreen extends StatelessWidget {
                         icon: Icons.history_toggle_off_rounded,
                         iconColor: const Color(0xFF3B82F6),
                         iconBg: const Color(0xFFEBF5FF),
-                        value: '24',
+                        value: _totalBorrowedCount.toString(),
                         label: 'Total Borrowed',
                       ),
                     ),
@@ -262,6 +317,20 @@ class StudentProfileScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                   ),
                   const SizedBox(height: 16),
+                  
+                  _buildMenuItem(
+                    icon: Icons.person_outline_rounded,
+                    iconColor: const Color(0xFF2563EB),
+                    iconBg: const Color(0xFFEFF6FF),
+                    title: 'Account Details',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AdminAccountDetailScreen()),
+                      ).then((_) => _loadSession());
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   
                   _buildMenuItem(
                     icon: Icons.history_rounded,

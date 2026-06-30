@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../constants/colors.dart';
-import '../../api_service.dart'; // <--- Memanggil ApiService yang mengarah ke Laragon
+import '../../api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPortalScreen extends StatefulWidget {
   const LoginPortalScreen({super.key});
@@ -41,6 +42,15 @@ class _LoginPortalScreenState extends State<LoginPortalScreen> {
         String selectedRoleStr = _selectedRole == 0 ? 'admin' : 'student';
 
         if (dbRole == selectedRoleStr) {
+          // Save session to SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_id', response['id'].toString());
+          await prefs.setString('user_email', response['email'] ?? '');
+          await prefs.setString('user_role', dbRole);
+          await prefs.setString('user_full_name', response['full_name'] ?? '');
+          await prefs.setString('user_phone', response['phone'] ?? '');
+          await prefs.setString('user_profile_image', response['profile_image'] ?? '');
+
           // Jika cocok, lakukan Conditional Routing sesuai Hak Akses
           if (dbRole == 'admin') {
             Navigator.pushReplacementNamed(context, '/admin-dashboard');
@@ -149,14 +159,7 @@ class _LoginPortalScreenState extends State<LoginPortalScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _isLoading ? null : () {},
-                      child: const Text('Forgot Password?', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+
 
                   // Button Sign In dengan Animasi Loading Indikator
                   ElevatedButton(

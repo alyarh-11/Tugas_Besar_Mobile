@@ -11,6 +11,8 @@ class AdminRegisterMemberScreen extends StatefulWidget {
 
 class _AdminRegisterMemberScreenState extends State<AdminRegisterMemberScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _fullNameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
@@ -30,6 +32,8 @@ class _AdminRegisterMemberScreenState extends State<AdminRegisterMemberScreen> {
 
   @override
   void dispose() {
+    _fullNameCtrl.dispose();
+    _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
@@ -65,11 +69,15 @@ class _AdminRegisterMemberScreenState extends State<AdminRegisterMemberScreen> {
       _emailCtrl.text.trim(),
       _passwordCtrl.text,
       _selectedRole,
+      _fullNameCtrl.text.trim(),
+      _phoneCtrl.text.trim(),
     );
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (result['status'] == 'success') {
+      _fullNameCtrl.clear();
+      _phoneCtrl.clear();
       _emailCtrl.clear();
       _passwordCtrl.clear();
       _confirmCtrl.clear();
@@ -227,6 +235,25 @@ class _AdminRegisterMemberScreenState extends State<AdminRegisterMemberScreen> {
                     ]),
                     const SizedBox(height: 20),
                     const Divider(color: Color(0xFFF1F5F9)),
+                    const SizedBox(height: 16),
+
+                    _buildLabel('Nama Lengkap'),
+                    TextFormField(
+                      controller: _fullNameCtrl,
+                      decoration: _inputDecor('Contoh: Budi Santoso', Icons.person_outline_rounded),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Nama lengkap wajib diisi';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildLabel('Nomor Telepon'),
+                    TextFormField(
+                      controller: _phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: _inputDecor('Contoh: 08123456789', Icons.phone_outlined),
+                    ),
                     const SizedBox(height: 16),
 
                     _buildLabel('Email'),

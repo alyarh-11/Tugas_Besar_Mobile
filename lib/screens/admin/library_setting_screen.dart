@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminLibrarySettingsScreen extends StatefulWidget {
   const AdminLibrarySettingsScreen({super.key});
@@ -12,12 +13,48 @@ class _AdminLibrarySettingsScreenState extends State<AdminLibrarySettingsScreen>
   String _selectedMaxBooks = '3 Books';
   bool _isNotificationEnabled = true;
   bool _isSyncEnabled = false;
+  bool _isLoading = true;
 
   final List<String> _durationOptions = ['3 Days', '7 Days', '14 Days', '30 Days'];
   final List<String> _maxBooksOptions = ['1 Book', '2 Books', '3 Books', '5 Books'];
 
   @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _selectedDuration = prefs.getString('library_duration') ?? '7 Days';
+      _selectedMaxBooks = prefs.getString('library_max_books') ?? '3 Books';
+      _isNotificationEnabled = prefs.getBool('library_notifications') ?? true;
+      _isSyncEnabled = prefs.getBool('library_sync') ?? false;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('library_duration', _selectedDuration);
+    await prefs.setString('library_max_books', _selectedMaxBooks);
+    await prefs.setBool('library_notifications', _isNotificationEnabled);
+    await prefs.setBool('library_sync', _isSyncEnabled);
+    
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Library preferences updated successfully!'), backgroundColor: Colors.green),
+    );
+    Navigator.pop(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -181,12 +218,7 @@ class _AdminLibrarySettingsScreenState extends State<AdminLibrarySettingsScreen>
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Library preferences updated successfully!')),
-                      );
-                      Navigator.pop(context);
-                    },
+                    onPressed: _saveSettings,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
@@ -249,18 +281,18 @@ class _AdminLibrarySettingsScreenState extends State<AdminLibrarySettingsScreen>
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B),
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF94A3B8),
-                        height: 1.3,
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                        height: 1.4,
                       ),
                     ),
                   ],
@@ -270,7 +302,10 @@ class _AdminLibrarySettingsScreenState extends State<AdminLibrarySettingsScreen>
             ],
           ),
           if (child != null) ...[
-            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.0),
+              child: Divider(color: Color(0xFFF1F5F9), height: 1),
+            ),
             child,
           ]
         ],
@@ -281,32 +316,32 @@ class _AdminLibrarySettingsScreenState extends State<AdminLibrarySettingsScreen>
   Widget _buildDropdown({
     required String value,
     required List<String> items,
-    required ValueChanged<String?> onChanged,
+    required void Function(String?) onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF94A3B8)),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B)),
           style: const TextStyle(
-            color: Color(0xFF1E293B),
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF334155),
           ),
-          onChanged: onChanged,
-          items: items.map<DropdownMenuItem<String>>((String val) {
+          items: items.map((String item) {
             return DropdownMenuItem<String>(
-              value: val,
-              child: Text(val),
+              value: item,
+              child: Text(item),
             );
           }).toList(),
+          onChanged: onChanged,
         ),
       ),
     );

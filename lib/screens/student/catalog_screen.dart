@@ -131,7 +131,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 
   Widget buildBookCard(BookModel book) {
-    bool available = book.status == "Available";
+    bool available = book.status.toLowerCase() == "available";
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -217,18 +217,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
             width: double.infinity,
             height: 38,
             child: ElevatedButton(
-              onPressed: available
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BookDetailsScreen(
-                            book: book,
-                          ),
+              onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookDetailsScreen(
+                          book: book,
                         ),
-                      );
-                    }
-                  : null,
+                      ),
+                    ).then((_) => loadBooks());
+                  },
               child: Text(
                 available
                     ? "Borrow"

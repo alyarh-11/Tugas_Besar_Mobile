@@ -70,8 +70,8 @@ class AboutAppScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Flutter', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),
-                  Text('Firebase Firestore', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),
-                  Text('Google Books API', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),
+                  Text('MySQL Laragon', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),
+                  Text('API Library', style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.6, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),

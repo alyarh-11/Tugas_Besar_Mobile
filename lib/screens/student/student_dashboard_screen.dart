@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../api_service.dart';
 import 'catalog_screen.dart';
 import 'student_profile_screen.dart';
 import 'borrowing_history_screen.dart'; 
@@ -13,33 +15,43 @@ class StudentDashboardScreen extends StatefulWidget {
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   int _currentIndex = 0;
   bool _showBorrowedBooksSubPage = false;
+  String _fullName = '';
+  String _profileImage = '';
+  String _userId = '';
+  List<dynamic> _activeLoans = [];
+  int _availableBooksCount = 0;
+  bool _isLoadingLoans = true;
 
-  final List<Map<String, dynamic>> _activeLoans = [
-    {
-      'title': 'The Psychology of Money',
-      'author': 'Morgan Housel',
-      'borrowedDate': 'June 1, 2026',
-      'dueDate': 'June 8, 2026',
-      'daysLeft': '7 days left',
-      'iconColor': const Color(0xFF00C4B4),
-    },
-    {
-      'title': 'Atomic Habits',
-      'author': 'James Clear',
-      'borrowedDate': 'May 28, 2026',
-      'dueDate': 'June 4, 2026',
-      'daysLeft': '3 days left',
-      'iconColor': const Color(0xFF5B86FF),
-    },
-    {
-      'title': '1984',
-      'author': 'George Orwell',
-      'borrowedDate': 'May 25, 2026',
-      'dueDate': 'June 1, 2026',
-      'daysLeft': '1 day left',
-      'iconColor': const Color(0xFFFF4B72),
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userId = prefs.getString('user_id') ?? '1';
+      _fullName = prefs.getString('user_full_name') ?? 'Student';
+      _profileImage = prefs.getString('user_profile_image') ?? '';
+    });
+    _fetchLoans();
+  }
+
+  Future<void> _fetchLoans() async {
+    final loansFuture = ApiService.getStudentLoans(_userId);
+    final booksFuture = ApiService.getBooks();
+    
+    final loans = await loansFuture;
+    final books = await booksFuture;
+
+    if (!mounted) return;
+    setState(() {
+      _activeLoans = loans.where((l) => l['status'] == 'active').toList();
+      _availableBooksCount = books.where((b) => b.status.toLowerCase() == 'available').length;
+      _isLoadingLoans = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,22 +129,35 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      child: const Text(
-                        'KI',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                        image: _profileImage.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage("${ApiService.baseUrl}/$_profileImage"),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
+                      alignment: Alignment.center,
+                      child: _profileImage.isNotEmpty
+                          ? null
+                          : Text(
+                              _fullName.isNotEmpty ? _fullName[0].toUpperCase() : 'S',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Welcome back,', style: TextStyle(color: Color(0xFF93C5FD), fontSize: 13)),
-                          SizedBox(height: 2),
-                          Text('Karina Ismaya', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                          const Text('Welcome back,', style: TextStyle(color: Color(0xFF93C5FD), fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text(_fullName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     )
@@ -141,9 +166,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 const SizedBox(height: 28),
                 Row(
                   children: [
-                    Expanded(child: _buildStatCard('3', 'Active Borrowed', Icons.bookmark_outline, const Color(0xFF10B981))),
+                    Expanded(child: _buildStatCard(_isLoadingLoans ? '-' : _activeLoans.length.toString(), 'Active Borrowed', Icons.bookmark_outline, const Color(0xFF10B981))),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildStatCard('1247', 'Available Books', Icons.menu_book_rounded, const Color(0xFF3B82F6))),
+                    Expanded(child: _buildStatCard(_isLoadingLoans ? '-' : _availableBooksCount.toString(), 'Available Books', Icons.menu_book_rounded, const Color(0xFF3B82F6))),
                   ],
                 )
               ],
@@ -270,100 +295,128 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             const SizedBox(height: 4),
             Text('${_activeLoans.length} books active', style: const TextStyle(fontSize: 14, color: Color(0xFF64748B))),
             const SizedBox(height: 20),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _activeLoans.length,
-              itemBuilder: (context, index) {
-                final book = _activeLoans[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 8, offset: const Offset(0, 4))],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(color: book['iconColor'], borderRadius: BorderRadius.circular(10)),
-                            child: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 22),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
+            _activeLoans.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(
+                      child: Text(
+                        'Kamu belum meminjam buku apapun.',
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _activeLoans.length,
+                    itemBuilder: (context, index) {
+                      final loan = _activeLoans[index];
+
+                      // Hitung sisa hari
+                      String daysLeftStr = 'Expired';
+                      if (loan['due_date'] != null) {
+                        DateTime dueDate = DateTime.tryParse(loan['due_date'].toString()) ?? DateTime.now();
+                        int diff = dueDate.difference(DateTime.now()).inDays;
+                        if (diff >= 0) {
+                          daysLeftStr = '$diff days left';
+                        } else {
+                          daysLeftStr = '${diff.abs()} days overdue';
+                        }
+                      }
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 8, offset: const Offset(0, 4))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(book['title'], style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 2),
-                                Text(book['author'], style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_rounded, size: 12, color: Color(0xFF94A3B8)),
-                                    const SizedBox(width: 6),
-                                    Text(book['borrowedDate'], style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-                                  ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(loan['title'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
+                                      const SizedBox(height: 2),
+                                      Text(loan['author'] ?? 'Unknown', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.access_time, size: 14, color: Color(0xFF94A3B8)),
+                                          const SizedBox(width: 4),
+                                          Text('Due: ${loan['due_date'] ?? '-'}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(6)),
+                                        child: Text(daysLeftStr, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 11, fontWeight: FontWeight.bold)),
+                                      )
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  width: 50,
+                                  height: 70,
                                   decoration: BoxDecoration(
-                                    color: (book['daysLeft'] as String).contains('1') ? const Color(0xFFFFECEF) : const Color(0xFFEBF2FF),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: const Color(0xFFEBF2FF),
+                                    borderRadius: BorderRadius.circular(8),
+                                    image: loan['cover_url'] != null && loan['cover_url'].toString().isNotEmpty
+                                        ? DecorationImage(
+                                            image: NetworkImage("${ApiService.baseUrl}/${loan['cover_url']}"),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
                                   ),
-                                  child: Text(
-                                    book['daysLeft'],
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: (book['daysLeft'] as String).contains('1') ? const Color(0xFFFF4B72) : const Color(0xFF1A68FF),
-                                    ),
-                                  ),
+                                  child: loan['cover_url'] == null || loan['cover_url'].toString().isEmpty
+                                      ? const Icon(Icons.book, color: Color(0xFF2563EB))
+                                      : null,
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 42,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFDC2626),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ReturnConfirmationScreen(
-                                  bookTitle: book['title'],
-                                  bookAuthor: book['author'],
-                                  borrowedDate: book['borrowedDate'],
-                                  bookIconColor: book['iconColor'],
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 42,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFDC2626),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
+                                onPressed: () async {
+                                  final result = await ApiService.returnBook(loan['id'].toString());
+                                  if (result['status'] == 'success') {
+                                    // Tampilkan sukses
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ReturnConfirmationScreen(
+                                          bookTitle: loan['title'] ?? '',
+                                        ),
+                                      ),
+                                    ).then((_) => _fetchLoans());
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(result['message'] ?? 'Failed to return book')),
+                                    );
+                                  }
+                                },
+                                child: const Text('Return Book', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                               ),
-                            );
-                          },
-                          child: const Text('Return Book', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -376,16 +429,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 // =========================================================================
 class ReturnConfirmationScreen extends StatelessWidget {
   final String bookTitle;
-  final String bookAuthor;
-  final String borrowedDate;
-  final Color bookIconColor;
 
   const ReturnConfirmationScreen({
     super.key,
     required this.bookTitle,
-    required this.bookAuthor,
-    required this.borrowedDate,
-    required this.bookIconColor,
   });
 
   @override

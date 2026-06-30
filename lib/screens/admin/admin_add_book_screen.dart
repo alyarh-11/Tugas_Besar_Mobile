@@ -176,7 +176,7 @@ class _AdminAddBookScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tambah Buku Via Google API', style: TextStyle(color: Colors.white)),
+        title: const Text('Tambah Buku Via API Library', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primaryBlue,
       ),
       body: Padding(
@@ -221,7 +221,7 @@ class _AdminAddBookScreenState
                         children: [
                           CircularProgressIndicator(),
                           SizedBox(height: 12),
-                          Text('Menghubungkan ke Google Books API...'),
+                          Text('Menghubungkan ke API Library...'),
                         ],
                       ),
                     )

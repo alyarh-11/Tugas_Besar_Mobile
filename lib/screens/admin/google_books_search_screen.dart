@@ -64,7 +64,7 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Google Books API Search', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: const Text('API Library Search', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),

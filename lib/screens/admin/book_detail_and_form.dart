@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../api_service.dart';
+import '../../models/book_model.dart';
 
 // =========================================================================
 // 1. DETAIL SCREEN & MODAL DELETE BOOK (ANTI-GAGAL)
@@ -254,8 +255,11 @@ class _AdminBookDetailScreenState extends State<AdminBookDetailScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => AdminBookFormScreen(bookData: widget.bookData)));
+                    onPressed: () async {
+                      final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => AdminBookFormScreen(bookData: widget.bookData)));
+                      if (result == 'saved' && context.mounted) {
+                        Navigator.pop(context, 'saved');
+                      }
                     },
                     icon: const Icon(Icons.edit_document, color: Colors.white),
                     label: const Text('Edit Book', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -330,6 +334,7 @@ class AdminBookFormScreen extends StatefulWidget {
 class _AdminBookFormScreenState extends State<AdminBookFormScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isEditMode = false;
+  bool _isLoading = false;
   String _selectedStatus = 'Available';
 
   final _titleCtrl = TextEditingController();
@@ -441,10 +446,54 @@ class _AdminBookFormScreenState extends State<AdminBookFormScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) Navigator.pop(context);
+                    onPressed: _isLoading ? null : () async {
+                      if (_formKey.currentState!.validate()) {
+                        setState(() => _isLoading = true);
+                        
+                        final book = BookModel(
+                          id: widget.bookData?['id']?.toString() ?? '',
+                          title: _titleCtrl.text,
+                          author: _authorCtrl.text,
+                          category: _categoryCtrl.text,
+                          coverUrl: widget.bookData?['cover_url'] ?? 'https://via.placeholder.com/150x220.png?text=No+Cover',
+                          publisher: _publisherCtrl.text,
+                          year: _yearCtrl.text,
+                          isbn: _isbnCtrl.text,
+                          summary: _summaryCtrl.text,
+                          status: _selectedStatus,
+                        );
+
+                        Map<String, dynamic> response;
+                        if (_isEditMode) {
+                          response = await ApiService.updateBook(book);
+                        } else {
+                          response = await ApiService.saveBookToLaragon(book);
+                        }
+
+                        if (!mounted) return;
+                        setState(() => _isLoading = false);
+
+                        if (response['status'] == 'success') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(response['message'] ?? 'Berhasil menyimpan buku!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.pop(context, 'saved');
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(response['message'] ?? 'Gagal menyimpan buku'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
                     },
-                    icon: Icon(_isEditMode ? Icons.edit_document : Icons.save_outlined, color: Colors.white),
+                    icon: _isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Icon(_isEditMode ? Icons.edit_document : Icons.save_outlined, color: Colors.white),
                     label: Text(_isEditMode ? 'Update Book' : 'Save Book', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isEditMode ? const Color(0xFF4F46E5) : const Color(0xFF00A86B),
