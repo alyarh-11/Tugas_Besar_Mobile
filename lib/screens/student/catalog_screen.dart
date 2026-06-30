@@ -53,19 +53,36 @@ class _CatalogScreenState extends State<CatalogScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            const Padding(
-              padding: EdgeInsets.only(
-                left: 20,
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 8,
                 top: 20,
                 bottom: 12,
               ),
-              child: Text(
-                "Catalog",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                    onPressed: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        // If we are in the bottom navigation tab, we can't pop.
+                        // Ideally, we'd have a callback to switch tab, but pushing replacement is a fallback,
+                        // or we can use Navigator.pushReplacementNamed(context, '/student-dashboard');
+                        Navigator.pushReplacementNamed(context, '/student-dashboard');
+                      }
+                    },
+                  ),
+                  const Text(
+                    "Catalog",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
 

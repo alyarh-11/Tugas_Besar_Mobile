@@ -99,17 +99,31 @@ class _DashboardTabState extends State<_DashboardTab> {
   int _activeUsers = 0;
   bool _isLoading = false;
   List<Map<String, String>> _recentActivities = [];
+  String _fullName = '';
+  String _profileImage = '';
 
   @override
   void initState() {
     super.initState();
+    _loadSession();
     _fetchDashboardData();
+  }
+
+  Future<void> _loadSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _fullName = prefs.getString('user_full_name') ?? 'Admin';
+        _profileImage = prefs.getString('user_profile_image') ?? '';
+      });
+    }
   }
 
   @override
   void didUpdateWidget(covariant _DashboardTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
+      _loadSession();
       _fetchDashboardData();
     }
   }
@@ -211,12 +225,66 @@ class _DashboardTabState extends State<_DashboardTab> {
         color: AppColors.primaryBlue,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Library Statistics',
+              // HEADER PROFILE SEPERTI DI STUDENT
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 35),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(Icons.smartphone, size: 28, color: Colors.grey.shade400),
+                          const Positioned(
+                            top: 8,
+                            child: Icon(Icons.menu_book, size: 14, color: AppColors.primaryBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Welcome back,', style: TextStyle(color: Color(0xFF93C5FD), fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text(_fullName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Library Statistics',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               const SizedBox(height: 16),
@@ -359,6 +427,9 @@ class _DashboardTabState extends State<_DashboardTab> {
                       title: act['title'] ?? '',
                       subtitle: act['subtitle'] ?? '',
                     )),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -723,24 +794,21 @@ class _ProfileTabState extends State<_ProfileTab> {
                           width: 84,
                           height: 84,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: Colors.white,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
-                            image: _profileImage.isNotEmpty
-                                ? DecorationImage(
-                                    image: NetworkImage("${ApiService.baseUrl}/$_profileImage"),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
                           ),
                           alignment: Alignment.center,
-                          child: _profileImage.isNotEmpty
-                              ? null
-                              : const Icon(
-                                  Icons.person_rounded,
-                                  color: Colors.white,
-                                  size: 44,
-                                ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(Icons.smartphone, size: 48, color: Colors.grey.shade400),
+                              const Positioned(
+                                top: 12,
+                                child: Icon(Icons.menu_book, size: 22, color: AppColors.primaryBlue),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(

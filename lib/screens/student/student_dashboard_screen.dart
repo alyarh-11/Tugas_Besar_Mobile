@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../api_service.dart';
 import 'catalog_screen.dart';
 import 'student_profile_screen.dart';
-import 'borrowing_history_screen.dart'; 
+import 'borrowing_history_screen.dart';
+import 'book_details_screen.dart';
+import '../../models/book_model.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
@@ -90,6 +92,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               _currentIndex = index;
               if (index != 0) {
                 _showBorrowedBooksSubPage = false;
+              } else {
+                _loadSession();
               }
             });
           },
@@ -132,23 +136,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     Container(
                       width: 48,
                       height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
                         shape: BoxShape.circle,
-                        image: _profileImage.isNotEmpty
-                            ? DecorationImage(
-                                image: NetworkImage("${ApiService.baseUrl}/$_profileImage"),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
                       ),
                       alignment: Alignment.center,
-                      child: _profileImage.isNotEmpty
-                          ? null
-                          : Text(
-                              _fullName.isNotEmpty ? _fullName[0].toUpperCase() : 'S',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(Icons.smartphone, size: 28, color: Colors.grey.shade400),
+                          const Positioned(
+                            top: 8,
+                            child: Icon(Icons.menu_book, size: 14, color: Color(0xFF3B82F6)),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -166,7 +168,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 const SizedBox(height: 28),
                 Row(
                   children: [
-                    Expanded(child: _buildStatCard(_isLoadingLoans ? '-' : _activeLoans.length.toString(), 'Active Borrowed', Icons.bookmark_outline, const Color(0xFF10B981))),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _showBorrowedBooksSubPage = true),
+                        child: _buildStatCard(_isLoadingLoans ? '-' : _activeLoans.length.toString(), 'Active Borrowed', Icons.bookmark_outline, const Color(0xFF10B981)),
+                      ),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(child: _buildStatCard(_isLoadingLoans ? '-' : _availableBooksCount.toString(), 'Available Books', Icons.menu_book_rounded, const Color(0xFF3B82F6))),
                   ],
@@ -324,7 +331,31 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         }
                       }
 
-                      return Container(
+                      return GestureDetector(
+                        onTap: () {
+                          final bookModel = BookModel(
+                            id: loan['book_id']?.toString() ?? '',
+                            title: loan['title'] ?? 'Unknown',
+                            author: loan['author'] ?? 'Unknown',
+                            category: 'General',
+                            coverUrl: (loan['cover_url'] != null && loan['cover_url'].toString().isNotEmpty)
+                                ? '${ApiService.baseUrl}/${loan['cover_url']}'
+                                : 'https://via.placeholder.com/150x220.png?text=No+Cover',
+                            bookUrl: loan['book_url'] ?? '',
+                            publisher: loan['publisher'] ?? '-',
+                            year: loan['publish_year'] ?? '-',
+                            isbn: loan['isbn'] ?? '-',
+                            summary: loan['summary'] ?? '',
+                            status: 'Borrowed',
+                          );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BookDetailsScreen(book: bookModel),
+                            ),
+                          );
+                        },
+                        child: Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -413,6 +444,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                               ),
                             ),
                           ],
+                        ),
                         ),
                       );
                     },

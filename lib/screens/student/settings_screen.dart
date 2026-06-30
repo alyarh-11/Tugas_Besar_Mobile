@@ -10,8 +10,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _borrowNotifications = true;
   bool _returnReminders = true;
-  String _selectedLanguage = 'English';
-  String _selectedTheme = 'Light Mode';
 
   @override
   Widget build(BuildContext context) {
@@ -57,34 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // 2. Kelompok Preferensi
-            _buildGroupCard(
-              title: 'Application Preferences',
-              icon: Icons.language_rounded,
-              iconColor: const Color(0xFF2563EB),
-              children: [
-                _buildDropdownRow(
-                  label: 'Language',
-                  value: _selectedLanguage,
-                  items: ['English', 'Bahasa Indonesia'],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedLanguage = val);
-                  },
-                ),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                _buildDropdownRow(
-                  label: 'Theme',
-                  value: _selectedTheme,
-                  items: ['Light Mode', 'Dark Mode'],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedTheme = val);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // 3. Kelompok Privasi
+            // 2. Kelompok Privasi
             _buildGroupCard(
               title: 'Privacy',
               icon: Icons.lock_outline_rounded,
@@ -97,7 +68,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(fontSize: 14, color: Color(0xFF1E293B), fontWeight: FontWeight.w500),
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                  onTap: () {},
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Privacy Policy'),
+                        content: const Text('Your data is kept private and secure. We do not share your information with third parties.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

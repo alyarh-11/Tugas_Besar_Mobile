@@ -235,23 +235,21 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           width: 84,
                           height: 84,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
-                            image: _profileImage.isNotEmpty
-                                ? DecorationImage(
-                                    image: NetworkImage("${ApiService.baseUrl}/$_profileImage"),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
                           ),
                           alignment: Alignment.center,
-                          child: _profileImage.isNotEmpty
-                              ? null
-                              : Text(
-                                  _fullName.isNotEmpty ? _fullName[0].toUpperCase() : 'U',
-                                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                                ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(Icons.smartphone, size: 48, color: Colors.grey.shade400),
+                              const Positioned(
+                                top: 12,
+                                child: Icon(Icons.menu_book, size: 22, color: Color(0xFF3B82F6)),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(

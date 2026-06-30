@@ -344,6 +344,7 @@ class _AdminBookFormScreenState extends State<AdminBookFormScreen> {
   final _publisherCtrl = TextEditingController();
   final _isbnCtrl = TextEditingController();
   final _summaryCtrl = TextEditingController();
+  final _urlCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -357,6 +358,7 @@ class _AdminBookFormScreenState extends State<AdminBookFormScreen> {
       _publisherCtrl.text = widget.bookData!['publisher'] ?? '';
       _isbnCtrl.text = widget.bookData!['isbn'] ?? '';
       _summaryCtrl.text = widget.bookData!['summary'] ?? '';
+      _urlCtrl.text = widget.bookData!['bookUrl'] ?? widget.bookData!['book_url'] ?? '';
       _selectedStatus = widget.bookData!['status'] ?? 'Available';
     }
   }
@@ -404,6 +406,9 @@ class _AdminBookFormScreenState extends State<AdminBookFormScreen> {
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_label('ISBN'), _field(_isbnCtrl, '978-0-00...')])),
                         ],
                       ),
+                      const SizedBox(height: 16),
+                      _label('Book URL / Link'),
+                      _field(_urlCtrl, 'Enter link to read book...'),
                       const SizedBox(height: 16),
                       _label('Summary'),
                       _field(_summaryCtrl, 'Brief description...', maxLines: 4),
@@ -461,6 +466,7 @@ class _AdminBookFormScreenState extends State<AdminBookFormScreen> {
                           isbn: _isbnCtrl.text,
                           summary: _summaryCtrl.text,
                           status: _selectedStatus,
+                          bookUrl: _urlCtrl.text,
                         );
 
                         Map<String, dynamic> response;

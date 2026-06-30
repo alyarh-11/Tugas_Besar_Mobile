@@ -4,6 +4,7 @@ class BookModel {
   final String author;
   final String category;
   final String coverUrl;
+  final String bookUrl;
   final String publisher;
   final String year;
   final String isbn;
@@ -16,6 +17,7 @@ class BookModel {
     required this.author,
     required this.category,
     required this.coverUrl,
+    required this.bookUrl,
     required this.publisher,
     required this.year,
     required this.isbn,
@@ -62,12 +64,15 @@ class BookModel {
       }
     }
 
+    String bookUrlData = volumeInfo['previewLink'] ?? volumeInfo['infoLink'] ?? '';
+
     return BookModel(
       id: json['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
       title: volumeInfo['title'] ?? 'Untitled Book',
       author: authorData,
       category: categoryData,
       coverUrl: cover,
+      bookUrl: bookUrlData,
       publisher: volumeInfo['publisher'] ?? 'Unknown Publisher',
       year: volumeInfo['publishedDate'] != null
           ? volumeInfo['publishedDate'].toString().split('-')[0]
@@ -121,6 +126,7 @@ class BookModel {
       author: authorData,
       category: categoryData,
       coverUrl: cover,
+      bookUrl: '', // Dikosongkan agar admin isi manual
       publisher: publisherData,
       year: json['first_publish_year']?.toString() ?? 'Unknown',
       isbn: isbnData,

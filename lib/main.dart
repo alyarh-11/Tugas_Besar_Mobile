@@ -6,6 +6,8 @@ import 'screens/admin/dashboard_screen.dart';
 import 'screens/admin/google_books_search_screen.dart';
 import 'screens/student/student_dashboard_screen.dart';
 
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+
 void main() {
   runApp(const PocketLibraryApp());
 }
@@ -15,24 +17,36 @@ class PocketLibraryApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pocket Library',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.background,
-        primaryColor: AppColors.primaryBlue,
-        fontFamily: 'Roboto',
-      ),
-      
-      // 1. Jalur gerbang utama diatur di sini
-      home: const SplashScreen(),
-      
-      // 2. Di sini daftar rute sisanya (Rute '/' SUDAH DIHAPUS agar tidak bentrok)
-      routes: {
-        '/login': (context) => const LoginPortalScreen(),
-        '/admin-dashboard': (context) => const DashboardScreen(),
-        '/student-dashboard': (context) => const StudentDashboardScreen(),
-        '/admin/google-search': (context) => const GoogleBooksSearchScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (_, ThemeMode currentMode, __) {
+        return MaterialApp(
+          title: 'Pocket Library',
+          debugShowCheckedModeBanner: false,
+          themeMode: currentMode,
+          theme: ThemeData(
+            scaffoldBackgroundColor: AppColors.background,
+            primaryColor: AppColors.primaryBlue,
+            fontFamily: 'Roboto',
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryBlue,
+              background: AppColors.background,
+            ),
+          ),
+          darkTheme: ThemeData.dark().copyWith(
+            primaryColor: AppColors.primaryBlue,
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primaryBlue,
+            ),
+          ),
+          home: const SplashScreen(),
+          routes: {
+            '/login': (context) => const LoginPortalScreen(),
+            '/admin-dashboard': (context) => const DashboardScreen(),
+            '/student-dashboard': (context) => const StudentDashboardScreen(),
+            '/admin/google-search': (context) => const GoogleBooksSearchScreen(),
+          },
+        );
       },
     );
   }

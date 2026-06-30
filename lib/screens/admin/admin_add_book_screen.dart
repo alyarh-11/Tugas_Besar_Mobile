@@ -139,6 +139,7 @@ class _AdminAddBookScreenState
         author: author,
         category: category,
         coverUrl: cover,
+        bookUrl: volumeInfo["previewLink"] ?? volumeInfo["infoLink"] ?? "",
         publisher: publisher,
         year: year,
         isbn: isbn,

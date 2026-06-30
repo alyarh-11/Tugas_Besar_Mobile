@@ -254,57 +254,30 @@ class _AdminAccountDetailScreenState extends State<AdminAccountDetailScreen> {
                     Center(
                       child: Column(
                         children: [
-                          GestureDetector(
-                            onTap: _pickImage,
-                            child: Stack(
-                              alignment: Alignment.bottomRight,
-                              children: [
-                                Container(
-                                  width: 96,
-                                  height: 96,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: const Color(0xFF1A68FF),
-                                    image: _pickedImage != null
-                                        ? DecorationImage(
-                                            image: kIsWeb ? NetworkImage(_pickedImage!.path) : NetworkImage(_pickedImage!.path), 
-                                            // Fallback for picking in web: XFile.path is object URL in web which works with NetworkImage
-                                            fit: BoxFit.cover,
-                                          )
-                                        : imageUrl.isNotEmpty
-                                            ? DecorationImage(
-                                                image: NetworkImage(imageUrl),
-                                                fit: BoxFit.cover,
-                                              )
-                                            : null,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF1A68FF).withAlpha(50),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: (_pickedImage == null && imageUrl.isEmpty)
-                                      ? const Icon(Icons.person_outline_rounded, color: Colors.white, size: 48)
-                                      : null,
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF2563EB),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextButton.icon(
-                            onPressed: _pickImage,
-                            icon: const Icon(Icons.photo_library_outlined, size: 14, color: AppColors.primaryBlue),
-                            label: const Text('Ganti Foto Profil', style: TextStyle(color: AppColors.primaryBlue, fontSize: 13)),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(Icons.smartphone, size: 54, color: Colors.grey.shade400),
+                                const Positioned(
+                                  top: 14,
+                                  child: Icon(Icons.menu_book, size: 26, color: AppColors.primaryBlue),
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(

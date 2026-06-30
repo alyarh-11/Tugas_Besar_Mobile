@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'borrow_success_screen.dart'; // Import halaman sukses agar bisa berpindah halaman
 import '../../models/book_model.dart';
 import '../../api_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BookDetailsScreen extends StatelessWidget {
 
@@ -15,6 +16,11 @@ class BookDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String displayCoverUrl = book.coverUrl;
+    if (!displayCoverUrl.startsWith('http') && displayCoverUrl.isNotEmpty) {
+      displayCoverUrl = '${ApiService.baseUrl}/$displayCoverUrl';
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), // Latar belakang abu-abu sangat terang sesuai gambar
       
@@ -52,7 +58,7 @@ class BookDetailsScreen extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
-                        book.coverUrl,
+                        displayCoverUrl,
                         width: 160,
                         height: 220,
                         fit: BoxFit.cover,
@@ -240,58 +246,101 @@ class BookDetailsScreen extends StatelessWidget {
             // --- BOTTOM STATIONARY BUTTON (Tetap terkunci di bawah layar) ---
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 10),
-              child: SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton.icon(
-                 onPressed: book.status.toLowerCase() != "available"
-                  ? null
-                  : () async {
-                      // 1. Get User ID
-                      final prefs = await SharedPreferences.getInstance();
-                      final userId = prefs.getString('user_id') ?? '1';
-
-                      // 2. Tampilkan loading dialog atau SnackBar indicator
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Processing borrow request...')),
-                      );
-
-                      // 3. Call API
-                      final result = await ApiService.borrowBook(userId, book.id);
-                      
-                      if (!context.mounted) return;
-                      
-                      if (result['status'] == 'success') {
-                        // AKSI NAVIGASI: Mengganti halaman detail langsung dengan halaman Sukses Pinjam
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const BorrowSuccessScreen(),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 54,
+                      child: ElevatedButton.icon(
+                       onPressed: book.status.toLowerCase() != "available"
+                        ? null
+                        : () async {
+                            // 1. Get User ID
+                            final prefs = await SharedPreferences.getInstance();
+                            final userId = prefs.getString('user_id') ?? '1';
+      
+                            // 2. Tampilkan loading dialog atau SnackBar indicator
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Processing borrow request...')),
+                            );
+      
+                            // 3. Call API
+                            final result = await ApiService.borrowBook(userId, book.id);
+                            
+                            if (!context.mounted) return;
+                            
+                            if (result['status'] == 'success') {
+                              // AKSI NAVIGASI: Mengganti halaman detail langsung dengan halaman Sukses Pinjam
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const BorrowSuccessScreen(),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(result['message'] ?? 'Failed to borrow book'), backgroundColor: Colors.red),
+                              );
+                            }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00B4D8), // Warna hijau/teal tombol utama sesuai gambar
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(result['message'] ?? 'Failed to borrow book'), backgroundColor: Colors.red),
-                        );
-                      }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00B4D8), // Warna hijau/teal tombol utama sesuai gambar
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                        ),
+                        icon: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 20),
+                        label: const Text(
+                          'Borrow',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  icon: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 20),
-                  label: const Text(
-                    'Borrow This Book',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  if (book.bookUrl.isNotEmpty) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final Uri url = Uri.parse(book.bookUrl);
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Could not open book link')),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4F46E5),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          icon: const Icon(Icons.chrome_reader_mode, color: Colors.white, size: 20),
+                          label: const Text(
+                            'Read Book',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  ]
+                ],
               ),
             ),
           ],

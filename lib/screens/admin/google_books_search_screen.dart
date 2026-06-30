@@ -67,6 +67,7 @@ class _GoogleBooksSearchScreenState extends State<GoogleBooksSearchScreen> {
         title: const Text('API Library Search', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       body: Padding(

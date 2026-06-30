@@ -62,6 +62,7 @@ class ApiService {
         "author": book.author,
         "category": book.category,
         "cover_url": book.coverUrl,
+        "book_url": book.bookUrl,
         "publisher": book.publisher,
         "publish_year": book.year,
         "isbn": book.isbn,
@@ -97,6 +98,7 @@ class ApiService {
           "author": book.author,
           "category": book.category,
           "cover_url": book.coverUrl,
+          "book_url": book.bookUrl,
           "publisher": book.publisher,
           "publish_year": book.year,
           "isbn": book.isbn,
@@ -142,6 +144,7 @@ class ApiService {
                 category: e["category"] ?? "General",
                 coverUrl: e["cover_url"] ??
                     "https://via.placeholder.com/150x220.png?text=No+Cover",
+                bookUrl: e["book_url"] ?? "",
                 publisher: e["publisher"] ?? "",
                 year: e["publish_year"] ?? "",
                 isbn: e["isbn"] ?? "",
